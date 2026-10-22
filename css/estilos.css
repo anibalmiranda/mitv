@@ -1,0 +1,399 @@
+/* Multi YouTube — estilos */
+:root {
+  --bg: #0f0f10;
+  --panel: #1b1b1e;
+  --borde: #2e2e33;
+  --texto: #e8e8ea;
+  --suave: #9a9aa2;
+  --acento: #ff3b3b;
+  --oro: #ffc83d;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--texto); font-family: system-ui, Segoe UI, Roboto, sans-serif; overflow: hidden; }
+
+#contenedor {
+  width: 97vw;
+  height: 90vh;
+  margin: 5vh auto 0;
+  display: grid;
+  gap: 6px;
+  position: relative;
+}
+.celda {
+  position: relative;
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--borde);
+}
+.celda.max { position: absolute; inset: 0; z-index: 10; }
+.celda.max.entrando { z-index: 11; }   /* el video que entra queda encima durante el fundido */
+/* En pantalla completa el video ampliado ocupa TODA la pantalla: reproductor más grande = YouTube elige más resolución */
+body.pantalla-completa .celda.max { position: fixed; inset: 0; border: 0; border-radius: 0; }
+.celda iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.celda.error { display: flex; align-items: center; justify-content: center; padding: 12px; text-align: center; color: var(--suave); font-size: 13px; word-break: break-all; }
+.celda.con-audio { border-color: var(--acento); }
+/* En pantalla completa, sin marcos (ni el rojo del video con audio) */
+body.pantalla-completa .celda,
+body.pantalla-completa .celda.con-audio { border-color: transparent; }
+/* En pantalla completa, el 🔊 y la etiqueta EN VIVO solo aparecen al mover el mouse */
+.celda .icono-audio, .celda > .etq-vivo { transition: opacity .4s ease; }
+body.pantalla-completa:not(.mouse-activo) .celda .icono-audio,
+body.pantalla-completa:not(.mouse-activo) .celda > .etq-vivo { opacity: 0; }
+
+/* Arrastrar: centro intercambia, bordes insertan */
+body.arrastrando .celda iframe { pointer-events: none; }
+.celda.arrastrada { opacity: .35; }
+.celda.sobre { outline: 2px dashed var(--acento); outline-offset: -2px; }
+.celda.ins-antes   { box-shadow: inset 5px 0 0 var(--acento); }
+.celda.ins-despues { box-shadow: inset -5px 0 0 var(--acento); }
+body.modo-audio .celda.ins-antes   { box-shadow: inset 0 4px 0 var(--acento); }
+body.modo-audio .celda.ins-despues { box-shadow: inset 0 -4px 0 var(--acento); }
+
+/* Botones por cuadro */
+.celda .quitar, .celda .maximizar, .celda .fav, .celda .buscar {
+  position: absolute; top: 6px; right: 6px; z-index: 4;   /* encima del aviso "No disponible" */
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 0; background: rgba(0,0,0,.65); color: #fff; cursor: pointer;
+  font-size: 15px; line-height: 26px; opacity: 0; transition: opacity .15s;
+}
+.celda .maximizar { right: 38px; font-size: 14px; }
+.celda .fav { right: 70px; font-size: 15px; }
+.celda .buscar { right: 102px; font-size: 12px; }
+.celda:hover .quitar, .celda:hover .maximizar, .celda:hover .fav, .celda:hover .buscar { opacity: 1; }
+.celda.caido .buscar { opacity: 1; }
+
+/* Video o directo no disponible */
+.celda .aviso-caido {
+  position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px; padding: 14px; text-align: center;
+  background: rgba(10,10,12,.92); color: var(--suave); font-size: 13px;
+}
+.celda .aviso-caido b { color: var(--texto); font-size: 14px; font-weight: 600; }
+.celda .aviso-caido button {
+  border: 0; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px;
+  background: var(--acento); color: #fff;
+}
+body.modo-audio .celda .aviso-caido { display: none; }
+body.modo-audio .celda.caido .fila-audio .estado { color: #ffb4b4; }
+.celda.es-fav .fav { opacity: 1; color: var(--oro); }
+.celda.max .quitar { display: none; }
+
+/* Capa que captura el clic (audio) y el arrastre; deja libre la barra de controles de YouTube */
+.celda .capa-audio {
+  position: absolute; left: 0; right: 0; top: 0; bottom: 52px; z-index: 2;
+  cursor: pointer; background: transparent;
+}
+.celda .icono-audio {
+  position: absolute; top: 6px; left: 6px; z-index: 3;
+  background: rgba(0,0,0,.65); color: #fff; border-radius: 4px;
+  font-size: 13px; padding: 2px 7px; pointer-events: none;
+}
+.celda.con-audio .icono-audio { background: var(--acento); }
+
+/* Etiqueta EN VIVO */
+.etq-vivo {
+  display: none; align-items: center; gap: 5px;
+  background: #cc0000; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  padding: 2px 7px; border-radius: 4px; pointer-events: none; white-space: nowrap;
+}
+.etq-vivo::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%; background: #fff;
+  animation: latidoVivo 1.6s ease-in-out infinite;
+}
+@keyframes latidoVivo { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+.celda > .etq-vivo { position: absolute; top: 7px; left: 42px; z-index: 3; }
+.celda.en-vivo .etq-vivo { display: inline-flex; }
+body.modo-audio .celda.en-vivo > .etq-vivo { display: none; }   /* en solo audio va dentro de la fila */
+.fila-audio .titulo-fila { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fila-audio .titulo-fila .titulo { min-width: 0; }
+.fila-audio .etq-vivo { flex-shrink: 0; }
+.item .thumb { position: relative; }
+.item .thumb .etq-vivo { display: inline-flex; position: absolute; left: 5px; bottom: 5px; }
+
+/* Fila de "solo audio": tapa el video y muestra barras + título */
+.celda .fila-audio {
+  position: absolute; inset: 0; z-index: 1; display: none;
+  align-items: center; gap: 14px; padding: 0 16px;
+  background: #141417;
+}
+.fila-audio .barras { display: flex; align-items: flex-end; gap: 3px; height: 28px; width: 46px; flex-shrink: 0; }
+.fila-audio .barras span { width: 6px; height: 4px; background: var(--suave); border-radius: 2px; }
+.celda.con-audio:not(.pausado) .fila-audio .barras span {
+  background: var(--acento);
+  animation: eq 1s ease-in-out infinite;
+}
+.fila-audio .barras span:nth-child(1) { animation-delay: -0.2s !important; }
+.fila-audio .barras span:nth-child(2) { animation-delay: -0.6s !important; animation-duration: .8s !important; }
+.fila-audio .barras span:nth-child(3) { animation-delay: -0.4s !important; animation-duration: 1.2s !important; }
+.fila-audio .barras span:nth-child(4) { animation-delay: -0.9s !important; animation-duration: .9s !important; }
+.fila-audio .barras span:nth-child(5) { animation-delay: -0.1s !important; animation-duration: 1.1s !important; }
+@keyframes eq { 0%,100% { height: 4px; } 50% { height: 28px; } }
+.fila-audio .info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.fila-audio .titulo { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fila-audio .autor { font-size: 12px; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fila-audio .estado { font-size: 12px; color: var(--suave); flex-shrink: 0; margin-right: 70px; }
+.celda.con-audio .fila-audio .estado { color: var(--acento); }
+
+/* Modo solo audio (global) */
+body.modo-audio #contenedor {
+  grid-template-columns: 1fr !important;
+  grid-template-rows: none !important;
+  grid-auto-rows: 64px;
+  align-content: start;
+  overflow-y: auto;
+}
+body.modo-audio .celda .fila-audio { display: flex; }
+body.modo-audio .celda .capa-audio { bottom: 0; }
+body.modo-audio .celda .icono-audio,
+body.modo-audio .celda .maximizar { display: none; }
+body.modo-audio .celda .quitar { top: 50%; transform: translateY(-50%); right: 10px; }
+body.modo-audio .celda .fav { top: 50%; transform: translateY(-50%); right: 42px; }
+body.modo-audio .celda .buscar { top: 50%; transform: translateY(-50%); right: 74px; }
+
+/* Navegación anterior / siguiente (solo en pantalla completa) */
+.nav-btn {
+  position: fixed; top: 50%; transform: translateY(-50%); z-index: 15;
+  width: 64px; height: 34vh; border: 0; cursor: pointer;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.04); color: #fff;
+  opacity: .25; transition: opacity .2s, background .2s;
+}
+.nav-btn:hover { opacity: 1; background: rgba(0,0,0,.45); }
+.nav-btn svg { width: 34px; height: 34px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.8)); }
+#navPrev { left: 0; border-radius: 0 10px 10px 0; }
+#navNext { right: 0; border-radius: 10px 0 0 10px; }
+body.pantalla-completa .nav-btn { display: flex; }
+
+/* Tira de videos estilo Netflix (solo en pantalla completa) */
+#zonaTira {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 17;
+  display: none; flex-direction: column; align-items: center;
+  transform: translateY(calc(100% - 40px)); transition: transform .3s ease;
+  pointer-events: none;
+}
+body.pantalla-completa #zonaTira { display: flex; }
+body.tira-abierta #zonaTira { transform: none; }
+#btnTira {
+  pointer-events: auto; width: 96px; height: 40px; border: 0; cursor: pointer;
+  background: rgba(255,255,255,.04); color: #fff; opacity: .25;
+  border-radius: 10px 10px 0 0; display: flex; align-items: center; justify-content: center;
+  transition: opacity .2s, background .2s;
+}
+#btnTira:hover { opacity: 1; background: rgba(0,0,0,.55); }
+body.tira-abierta #btnTira { opacity: .9; background: rgba(0,0,0,.88); }
+#btnTira svg { width: 30px; height: 30px; transition: transform .3s; filter: drop-shadow(0 1px 3px rgba(0,0,0,.8)); }
+body.tira-abierta #btnTira svg { transform: rotate(180deg); }
+#tira {
+  pointer-events: auto; width: 100%;
+  background: rgba(0,0,0,.88); padding: 14px 2vw 18px;
+}
+#tiraItems {
+  display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden;
+  padding: 8px 4px; scroll-behavior: smooth; scrollbar-width: thin;
+}
+.item {
+  flex: 0 0 auto; width: 15vw; min-width: 160px; cursor: pointer; position: relative;
+  border-radius: 6px; overflow: hidden; border: 2px solid transparent; background: #1b1b1e;
+  transition: transform .2s, border-color .2s;
+}
+.item:hover { transform: scale(1.06); border-color: #fff; z-index: 1; }
+.item.actual { border-color: var(--acento); }
+.item .thumb {
+  aspect-ratio: 16 / 9; width: 100%; background: #000 center / cover no-repeat;
+  display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--suave);
+}
+.item .t { font-size: 12px; padding: 5px 7px 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item .a { font-size: 11px; color: var(--suave); padding: 0 7px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 18px; }
+.item .num, .item .sonando, .item .estrella {
+  position: absolute; top: 5px; background: rgba(0,0,0,.75); font-size: 11px; padding: 1px 6px; border-radius: 3px;
+}
+.item .num { left: 5px; }
+.item .sonando { right: 5px; background: var(--acento); }
+.item .estrella { left: 34px; color: var(--oro); }
+
+#indicador {
+  position: fixed; left: 50%; bottom: 7vh; transform: translateX(-50%); z-index: 25;
+  background: rgba(0,0,0,.8); color: #fff; font-size: 14px; padding: 8px 14px; border-radius: 8px;
+  max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0; transition: opacity .3s; pointer-events: none;
+}
+#indicador.visible { opacity: 1; }
+#avisoRetomar {
+  position: fixed; left: 50%; top: 0.6vh; transform: translateX(-50%); z-index: 25;
+  background: var(--acento); color: #fff; font-size: 13px; padding: 7px 14px; border-radius: 15px;
+  max-width: 60vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: none; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  animation: latidoAviso 2s ease-in-out infinite;
+}
+#avisoRetomar.visible { display: block; }
+@keyframes latidoAviso { 0%,100% { opacity: 1; } 50% { opacity: .75; } }
+
+#vacio {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px; color: var(--suave); text-align: center; pointer-events: none;
+}
+
+/* Barra superior */
+#barra-sup {
+  position: fixed; top: 0.6vh; right: 1.5vw; z-index: 20;
+  display: flex; gap: 8px; align-items: center;
+}
+#barra-sup button {
+  width: 3.6vh; height: 3.6vh; min-width: 30px; min-height: 30px;
+  border: 0; border-radius: 50%; background: var(--panel); color: var(--texto);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: transform .3s, background .2s;
+}
+#barra-sup button:hover { background: #2a2a2f; }
+#engranaje:hover { transform: rotate(60deg); }
+#barra-sup button svg { width: 60%; height: 60%; }
+#barra-sup button.activo { background: var(--acento); color: #fff; }
+#barra-sup #btnFavs.activo { background: var(--oro); color: #1b1b1e; }
+/* Carrusel: botón visible solo en pantalla completa */
+#barra-sup #btnCarrusel { display: none; }
+body.pantalla-completa #barra-sup #btnCarrusel { display: flex; }
+#barra-sup #btnCarrusel.activo svg { animation: girar 2.5s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+#barraCarrusel {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 26;
+  background: var(--oro); display: none; pointer-events: none;
+}
+body.carrusel-activo #barraCarrusel { display: block; }
+
+/* Visualizador de audio real */
+#lienzoVisual {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 35%; width: 100%;
+  z-index: 1; pointer-events: none; display: none;
+}
+#lienzoVisual.visible { display: block; }
+body.modo-audio #lienzoVisual { height: 100%; opacity: .55; z-index: 0; }
+body.visual-real .celda.con-audio .fila-audio .barras { visibility: hidden; }
+body.visual-real .celda.con-audio .fila-audio .info,
+body.visual-real .celda.con-audio .fila-audio .estado { position: relative; z-index: 2; }
+#lienzoVisual.completo { height: 100%; }   /* el circular usa todo el cuadro */
+
+/* Botones transparentes del visualizador (color / tipo / solo visualizador) */
+#controlesVisual {
+  position: absolute; right: 10px; bottom: 60px; z-index: 4;
+  display: flex; gap: 6px; opacity: .35; transition: opacity .3s;
+}
+#controlesVisual:hover { opacity: 1; }
+#controlesVisual button {
+  width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.35); color: #fff; cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px);
+}
+#controlesVisual button:hover { background: rgba(0,0,0,.65); }
+#controlesVisual button svg { width: 16px; height: 16px; }
+#controlesVisual [data-accion="escena"] { display: none; }
+body.pantalla-completa #controlesVisual [data-accion="escena"] { display: flex; }
+body.modo-audio .celda #controlesVisual { top: 50%; bottom: auto; transform: translateY(-50%); right: 112px; }
+body.pantalla-completa:not(.mouse-activo) #controlesVisual { opacity: 0; }
+body.pantalla-completa:not(.mouse-activo) #controlesVisual:hover { opacity: 1; }
+
+/* Escena "solo visualizador": fondo negro, el visualizador al centro (pantalla completa) */
+#escenaVisual {
+  position: fixed; inset: 0; z-index: 19; background: #000; display: none;
+}
+body.solo-visual #escenaVisual { display: block; }
+#escenaVisual #lienzoVisual { position: absolute; left: 5%; right: auto; top: 20%; bottom: auto; width: 90%; height: 60%; opacity: 1; }
+#escenaVisual #lienzoVisual.completo { top: 0; left: 0; width: 100%; height: 100%; }   /* efectos de pantalla entera */
+#escenaVisual #controlesVisual { right: auto; left: 50%; bottom: 4vh; top: auto; transform: translateX(-50%); }
+#escenaTitulo {
+  position: absolute; left: 0; right: 0; bottom: 11vh; text-align: center;
+  color: rgba(255,255,255,.55); font-size: 15px; letter-spacing: .03em; pointer-events: none;
+  transition: opacity .4s;
+}
+body.solo-visual:not(.mouse-activo) #escenaTitulo { opacity: 0; }
+#escenaAyuda {
+  position: absolute; top: 3vh; left: 0; right: 0; text-align: center;
+  color: rgba(255,255,255,.35); font-size: 12px; pointer-events: none; transition: opacity .4s;
+}
+body.solo-visual:not(.mouse-activo) #escenaAyuda { opacity: 0; }
+body.solo-visual #barra-sup, body.solo-visual .nav-btn, body.solo-visual #zonaTira { display: none !important; }
+body.solo-visual { cursor: none; }
+body.solo-visual #indicador { bottom: 20vh; }
+body.solo-visual.mouse-activo { cursor: default; }
+body.tira-abierta #indicador { bottom: 32vh; }
+#selLista {
+  height: 3.6vh; min-height: 30px; max-width: 220px;
+  background: var(--panel); color: var(--texto); border: 1px solid var(--borde); border-radius: 15px;
+  padding: 0 10px; font-size: 13px; cursor: pointer;
+}
+#selLista:focus { outline: 1px solid var(--acento); }
+
+/* Panel de configuración */
+#fondo {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 30;
+  display: none; align-items: center; justify-content: center;
+}
+#fondo.abierto { display: flex; }
+#panel {
+  background: var(--panel); border: 1px solid var(--borde); border-radius: 10px;
+  width: min(720px, 92vw); padding: 18px; display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+#panel h2 { font-size: 17px; font-weight: 600; }
+#panel p { font-size: 13px; color: var(--suave); line-height: 1.5; }
+#nombreLista {
+  flex: 1; min-width: 160px; background: #111113; color: var(--texto);
+  border: 1px solid var(--borde); border-radius: 6px; padding: 7px 10px; font-size: 14px;
+}
+#nombreLista:focus, #urls:focus { outline: 1px solid var(--acento); }
+#urls {
+  width: 100%; height: 240px; resize: vertical;
+  background: #111113; color: var(--texto); border: 1px solid var(--borde); border-radius: 6px;
+  padding: 10px; font-family: Consolas, monospace; font-size: 13px; line-height: 1.5;
+}
+.fila { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.fila label { font-size: 13px; color: var(--suave); display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.fila .espacio { flex: 1; }
+button.btn { border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 14px; }
+.btn.primario { background: var(--acento); color: #fff; }
+.btn.secundario { background: #2a2a2f; color: var(--texto); }
+.btn.peligro { background: #2a2a2f; color: #ffb4b4; }
+.btn.peligro.confirmar { background: #7a1d1d; color: #fff; }
+#aviso { font-size: 12px; color: #ffb4b4; min-height: 16px; }
+#aviso.ok { color: #9be7a6; }
+.etiqueta-fila { font-size: 13px; color: var(--suave); min-width: 70px; }
+
+/* Ventana "Buscar parecido" */
+#fondoBuscar {
+  position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 32;
+  display: none; align-items: center; justify-content: center;
+}
+#fondoBuscar.abierto { display: flex; }
+#panelBuscar {
+  background: var(--panel); border: 1px solid var(--borde); border-radius: 10px;
+  width: min(640px, 92vw); padding: 18px; display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+#panelBuscar h2 { font-size: 17px; font-weight: 600; }
+#panelBuscar p { font-size: 13px; color: var(--suave); line-height: 1.5; word-break: break-word; }
+#panelBuscar p b { color: var(--texto); }
+#panelBuscar a { color: #7fb8ff; }
+#buscarTexto, #buscarNuevaUrl {
+  flex: 1; min-width: 200px; background: #111113; color: var(--texto);
+  border: 1px solid var(--borde); border-radius: 6px; padding: 8px 10px; font-size: 14px;
+}
+#buscarTexto:focus, #buscarNuevaUrl:focus { outline: 1px solid var(--acento); }
+#avisoBuscar { font-size: 12px; color: #ffb4b4; min-height: 16px; }
+#avisoBuscar.ok { color: #9be7a6; }
+
+/* Cámaras IP (stream MJPEG): sin audio, sin buscar parecido; la capa de clic cubre todo (no hay controles de YouTube) */
+.celda img.camara { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.celda.camara .capa-audio { bottom: 0; cursor: zoom-in; }
+.celda.camara .icono-audio, .celda.camara .buscar, .celda.camara .aviso-caido button { display: none; }
+body.arrastrando .celda img.camara { pointer-events: none; }
+/* Aviso de directo que se está buscando o que no transmite */
+.celda .aviso-caido .directo { font-size: 12px; color: #9fd0ff; }
+.celda .aviso-caido .directo:empty { display: none; }
+
+/* Carga escalonada: mientras el reproductor espera su turno se ve la miniatura */
+.celda.esperando { background: #000 center / cover no-repeat; }
+.celda.esperando iframe { visibility: hidden; }
+.celda.esperando::after {
+  content: 'Cargando…'; position: absolute; left: 8px; bottom: 8px; z-index: 1;
+  background: rgba(0,0,0,.65); color: var(--suave); font-size: 11px; padding: 2px 7px; border-radius: 4px;
+}

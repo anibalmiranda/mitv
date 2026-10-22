@@ -1,0 +1,6 @@
+# Respaldo antiguo (ya no se usa: el historial queda en git)
+multiyoutube.zip
+
+# Python
+__pycache__/
+*.pyc

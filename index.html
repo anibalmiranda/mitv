@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Multi YouTube</title>
+<!-- Abre de antemano las conexiones con YouTube y sus miniaturas (la grilla carga más rápido) -->
+<link rel="preconnect" href="https://www.youtube.com">
+<link rel="preconnect" href="https://i.ytimg.com">
+<link rel="stylesheet" href="css/estilos.css?v=20261022c">
+</head>
+<body>
+
+<div id="barra-sup">
+  <select id="selLista" title="Lista activa"></select>
+  <button id="btnMuteGeneral" title="Silenciar todo">
+    <svg id="icoSonido" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 5L6 9H2v6h4l5 4z" fill="currentColor"></path>
+      <path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M19 5a10 10 0 0 1 0 14"></path>
+    </svg>
+    <svg id="icoSilencio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+      <path d="M11 5L6 9H2v6h4l5 4z" fill="currentColor"></path>
+      <path d="M23 9l-6 6"></path><path d="M17 9l6 6"></path>
+    </svg>
+  </button>
+  <button id="btnFavs" title="Ver favoritos">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z"></path></svg>
+  </button>
+  <button id="btnCarrusel" title="Carrusel: recorre los videos de la lista">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 0 1-15.5 6.2"></path><path d="M3 12a9 9 0 0 1 15.5-6.2"></path>
+      <path d="M18.5 2v4h-4"></path><path d="M5.5 22v-4h4"></path>
+    </svg>
+  </button>
+  <button id="btnPantalla" title="Pantalla completa">
+    <svg id="icoExpandir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"></path>
+    </svg>
+    <svg id="icoContraer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+      <path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"></path>
+    </svg>
+  </button>
+  <button id="btnVisual" title="Visualizador de audio real (usa &quot;Mezcla estéreo&quot;)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 12h2l2-6 3 12 3-15 3 15 3-9 2 3h2"></path>
+    </svg>
+  </button>
+  <button id="btnModoAudio" title="Solo audio (ocultar videos)">
+    <svg id="icoBarras" viewBox="0 0 24 24" fill="currentColor">
+      <rect x="3" y="10" width="3" height="10" rx="1"></rect>
+      <rect x="8" y="5" width="3" height="15" rx="1"></rect>
+      <rect x="13" y="8" width="3" height="12" rx="1"></rect>
+      <rect x="18" y="3" width="3" height="17" rx="1"></rect>
+    </svg>
+    <svg id="icoVideo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+      <rect x="2" y="5" width="15" height="14" rx="2"></rect>
+      <path d="M17 10l5-3v10l-5-3z"></path>
+    </svg>
+  </button>
+  <button id="engranaje" title="Configurar lista">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+  </button>
+</div>
+
+<div id="contenedor"></div>
+
+<button class="nav-btn" id="navPrev" title="Video anterior (←)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+</button>
+<button class="nav-btn" id="navNext" title="Video siguiente (→)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+</button>
+
+<div id="zonaTira">
+  <button id="btnTira" title="Ver todos los videos (↓)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+  </button>
+  <div id="tira"><div id="tiraItems"></div></div>
+</div>
+
+<div id="indicador"></div>
+<div id="avisoRetomar"></div>
+<div id="barraCarrusel"></div>
+
+<div id="vacio">
+  <div style="font-size:18px" id="vacioTitulo">Sin videos en esta lista</div>
+  <div style="font-size:13px" id="vacioTexto">Presiona el engranaje ⚙ arriba a la derecha y pega una URL de YouTube por línea</div>
+</div>
+
+<div id="fondo">
+  <div id="panel">
+    <h2 id="tituloPanel">Configurar lista</h2>
+    <div class="fila" id="filaNombre">
+      <input id="nombreLista" type="text" placeholder="Nombre de la lista" maxlength="40">
+      <button class="btn secundario" id="btnNueva">+ Nueva lista</button>
+      <button class="btn peligro" id="btnEliminar">Eliminar lista</button>
+    </div>
+    <p id="ayudaPanel">Una URL por línea: <code>watch?v=</code>, <code>youtu.be/</code>, <code>/live/</code>, <code>/shorts/</code>, <code>/embed/</code> , canales en vivo <code>youtube.com/channel/UC…</code> o por su <code>@nombre</code> (<code>youtube.com/@nombre</code>; necesita abrir con iniciar.bat), cámaras IP (<code>http://IP:puerto/mjpg/video.mjpg</code>, sin audio) y playlists (<code>playlist?list=</code> o <code>watch?v=…&amp;list=…</code>; con "Inicio aleatorio" parten en un video al azar y siguen mezcladas). Clic sobre un video le da el audio (uno a la vez). Doble clic amplía / vuelve a miniatura. Arrastra un cuadro y suéltalo sobre otro: queda justo antes de ese. ☆ marca favorito (máx. 9). Las líneas que empiezan con <code>#</code> se ignoran.</p>
+    <textarea id="urls" spellcheck="false" placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX&#10;https://youtu.be/XXXXXXXXXXX&#10;https://www.youtube.com/channel/UCxxxxxxxxxxxxxxxxxxxxxx&#10;@NombreDelCanal&#10;http://192.168.1.50:8080/mjpg/video.mjpg"></textarea>
+    <div class="fila">
+      <label title="De dónde lee el sonido el visualizador. 'Mezcla estéreo' entrega lo que suena en el PC.">Entrada del visualizador
+        <select id="selEntrada" style="max-width:340px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:4px 6px"></select></label>
+    </div>
+    <div class="fila" id="filaRespaldo">
+      <span class="etiqueta-fila">Respaldo</span>
+      <button class="btn secundario" id="btnExportar" title="Descarga un archivo .json con tus listas, favoritos, nombres, duraciones y ajustes">⬇ Exportar configuración</button>
+      <button class="btn secundario" id="btnImportar" title="Carga un archivo .json exportado antes">⬆ Importar configuración</button>
+      <input type="file" id="archivoImportar" accept=".json,application/json" hidden>
+      <span id="opcionesImportar" hidden>
+        <button class="btn primario" id="btnImportarAgregar" title="Suma las listas y favoritos del archivo a los que ya tienes">Agregar a lo actual</button>
+        <button class="btn peligro" id="btnImportarReemplazar" title="Borra lo actual y deja exactamente lo del archivo">Reemplazar todo</button>
+        <button class="btn secundario" id="btnImportarCancelar">✕</button>
+      </span>
+    </div>
+    <div id="aviso"></div>
+    <div class="fila">
+      <label><input type="checkbox" id="chkAutoplay" checked> Autoplay</label>
+      <label><input type="checkbox" id="chkMute" checked> Silenciados</label>
+      <label title="Los videos que no son en vivo parten en un punto al azar (si la URL trae ?t= se respeta ese tiempo)"><input type="checkbox" id="chkAleatorio" checked> Inicio aleatorio</label>
+      <label title="Cuando un video (que no es en vivo) termina, el audio pasa al siguiente de la lista y el terminado vuelve a partir"><input type="checkbox" id="chkSiguiente" checked> Al terminar, pasar al siguiente</label>
+      <label title="Con un video ampliado, solo corren el actual, el anterior y el siguiente. Con la ventana minimizada o en otra pestaña, solo el que tiene el audio. El resto se pausa y libera la conexión"><input type="checkbox" id="chkPausarOcultos" checked> Pausar los que no se ven</label>
+      <label title="Al pasar el audio de un video a otro, el anterior baja y el nuevo sube durante estos segundos (0 = cambio inmediato)">Fundido de audio
+        <input type="number" id="numFade" min="0" max="20" step="1" value="7"
+          style="width:56px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"> s</label>
+      <label title="En pantalla completa, el botón de carrusel recorre todos los videos de la lista elegida (no los favoritos) cambiando cada estos segundos">Carrusel cada
+        <input type="number" id="numCarrusel" min="5" max="600" step="5" value="30"
+          style="width:60px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"> s</label>
+      <label title="En pantalla completa y con el visualizador encendido, pasa sola a la pantalla negra tras estos minutos sin actividad (0 = apagado)">Protector de pantalla
+        <input type="number" id="numProtector" min="0" max="120" step="1" value="5"
+          style="width:56px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"> min</label>
+      <label title="Al cambiar de video ampliado (flechas o tira), el nuevo aparece de a poco sobre el actual (0 = cambio inmediato)">Fundido de imagen
+        <input type="number" id="numFadeImg" min="0" max="10" step="0.5" value="1.5"
+          style="width:56px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"> s</label>
+      <span class="espacio"></span>
+      <button class="btn secundario" id="btnCancelar">Cancelar</button>
+      <button class="btn primario" id="btnGuardar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Buscar algo parecido en YouTube (por ejemplo, un canal en vivo que cambió de URL) -->
+<div id="fondoBuscar">
+  <div id="panelBuscar">
+    <h2>🔍 Buscar parecido en YouTube</h2>
+    <p id="buscarOriginal"></p>
+    <div class="fila">
+      <input id="buscarTexto" type="text" placeholder="Qué buscar (nombre del canal o del video)">
+      <label title="Muestra solo transmisiones en vivo"><input type="checkbox" id="buscarSoloVivo"> Solo en vivo</label>
+      <button class="btn primario" id="btnBuscarYT">Buscar en YouTube ↗</button>
+    </div>
+    <p class="nota">Se abre YouTube en otra pestaña con los resultados. Copia la URL del que te sirva, pégala aquí y elige si reemplaza a este video o se agrega a la lista:</p>
+    <div class="fila">
+      <input id="buscarNuevaUrl" type="text" placeholder="https://www.youtube.com/watch?v=...">
+      <button class="btn secundario" id="btnBuscarDirecto" title="Pregunta a YouTube qué está transmitiendo en vivo ahora el canal de este video y pone esa URL aquí">📡 Directo actual</button>
+      <button class="btn primario" id="btnBuscarReemplazar" title="Cambia este video por el nuevo en todas tus listas y favoritos">Reemplazar</button>
+      <button class="btn secundario" id="btnBuscarAgregar" title="Deja este video y agrega el nuevo justo después, en la lista que estás viendo">+ Agregar a la lista</button>
+    </div>
+    <div id="avisoBuscar"></div>
+    <div class="fila"><span class="espacio"></span><button class="btn secundario" id="btnBuscarCerrar">Cerrar</button></div>
+  </div>
+</div>
+
+<script src="js/config.js?v=20261022c"></script>
+<script src="js/urls.js?v=20261022c"></script>
+<script src="js/grilla.js?v=20261022c"></script>
+<script src="js/favoritos.js?v=20261022c"></script>
+<script src="js/reproductor.js?v=20261022c"></script>
+<script src="js/audio.js?v=20261022c"></script>
+<script src="js/visualizador.js?v=20261022c"></script>
+<script src="js/pantalla.js?v=20261022c"></script>
+<script src="js/panel.js?v=20261022c"></script>
+<script src="js/respaldo.js?v=20261022c"></script>
+<script src="js/camaras.js?v=20261022c"></script>
+<script src="js/buscar.js?v=20261022c"></script>
+<script src="js/directos.js?v=20261022c"></script>
+<script src="js/main.js?v=20261022c"></script>
+</body>
+</html>
