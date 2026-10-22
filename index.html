@@ -8,7 +8,7 @@
 <!-- Abre de antemano las conexiones con YouTube y sus miniaturas (la grilla carga más rápido) -->
 <link rel="preconnect" href="https://www.youtube.com">
 <link rel="preconnect" href="https://i.ytimg.com">
-<link rel="stylesheet" href="css/estilos.css?v=20261022o">
+<link rel="stylesheet" href="css/estilos.css?v=20261022p">
 </head>
 <body>
 
@@ -28,6 +28,11 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="2" y="4" width="20" height="16" rx="2"></rect>
       <rect x="4.5" y="11.5" width="8" height="6" rx="1" fill="currentColor"></rect>
+    </svg>
+  </button>
+  <button id="btnCuenta" title="Cuenta atrás hasta la hora de salida (T)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2h12M6 22h12M7 2v4a5 5 0 0 0 10 0V2M7 22v-4a5 5 0 0 1 10 0v4"></path>
     </svg>
   </button>
   <button id="btnFavs" title="Ver favoritos">
@@ -89,6 +94,23 @@
 </div>
 
 <div id="indicador"></div>
+<!-- Cuenta atrás hasta la hora de salida, reloj de paletas como salida.html (cuentaatras.js) -->
+<div id="cuentaAtras">
+  <div class="countdown">
+    <div class="time-block">
+      <div class="flip" id="caHoras"><div class="half top"><span>--</span></div><div class="half bottom"><span>--</span></div></div>
+      <div class="time-label">Horas</div>
+    </div>
+    <div class="time-block">
+      <div class="flip" id="caMinutos"><div class="half top"><span>--</span></div><div class="half bottom"><span>--</span></div></div>
+      <div class="time-label">Minutos</div>
+    </div>
+    <div class="time-block">
+      <div class="flip" id="caSegundos"><div class="half top"><span>--</span></div><div class="half bottom"><span>--</span></div></div>
+      <div class="time-label">Segundos</div>
+    </div>
+  </div>
+</div>
 <!-- Super favorito: miniatura sin audio en la esquina inferior izquierda (superfav.js) -->
 <div id="superFav"><button id="cerrarSuperFav" title="Ocultar (S)">✕</button><span class="corona">👑</span></div>
 <div id="avisoRetomar"></div>
@@ -107,7 +129,7 @@
       <button class="btn secundario" id="btnNueva">+ Nueva lista</button>
       <button class="btn peligro" id="btnEliminar">Eliminar lista</button>
     </div>
-    <p id="ayudaPanel">Una URL por línea: <code>watch?v=</code>, <code>youtu.be/</code>, <code>/live/</code>, <code>/shorts/</code>, <code>/embed/</code> , canales en vivo <code>youtube.com/channel/UC…</code> o por su <code>@nombre</code> (<code>youtube.com/@nombre</code>; necesita abrir con iniciar.bat), cámaras IP (<code>http://IP:puerto/mjpg/video.mjpg</code>, sin audio) y playlists (<code>playlist?list=</code> o <code>watch?v=…&amp;list=…</code>; con "Inicio aleatorio" parten en un video al azar y siguen mezcladas). Clic sobre un video le da el audio (uno a la vez). Doble clic amplía / vuelve a miniatura. Arrastra un cuadro y suéltalo sobre otro: queda justo antes de ese. ☆ marca favorito (máx. 9). Las líneas que empiezan con <code>#</code> se ignoran.<br><b>Atajos:</b> <code>M</code> silenciar todo · <code>S</code> super favorito 👑 (miniatura en la esquina) · <code>F</code> pantalla completa · <code>C</code> carrusel · <code>1</code>–<code>9</code> ir a ese video · <code>+</code> / <code>−</code> volumen del que suena · flechas: anterior / siguiente y tira (en pantalla completa) · <code>Esc</code> volver a la grilla · teclas multimedia ⏯ ⏭ ⏮ ⏹.</p>
+    <p id="ayudaPanel">Una URL por línea: <code>watch?v=</code>, <code>youtu.be/</code>, <code>/live/</code>, <code>/shorts/</code>, <code>/embed/</code> , canales en vivo <code>youtube.com/channel/UC…</code> o por su <code>@nombre</code> (<code>youtube.com/@nombre</code>; necesita abrir con iniciar.bat), cámaras IP (<code>http://IP:puerto/mjpg/video.mjpg</code>, sin audio) y playlists (<code>playlist?list=</code> o <code>watch?v=…&amp;list=…</code>; con "Inicio aleatorio" parten en un video al azar y siguen mezcladas). Clic sobre un video le da el audio (uno a la vez). Doble clic amplía / vuelve a miniatura. Arrastra un cuadro y suéltalo sobre otro: queda justo antes de ese. ☆ marca favorito (máx. 9). Las líneas que empiezan con <code>#</code> se ignoran.<br><b>Atajos:</b> <code>M</code> silenciar todo · <code>S</code> super favorito 👑 (miniatura en la esquina) · <code>T</code> cuenta atrás · <code>F</code> pantalla completa · <code>C</code> carrusel · <code>1</code>–<code>9</code> ir a ese video · <code>+</code> / <code>−</code> volumen del que suena · flechas: anterior / siguiente y tira (en pantalla completa) · <code>Esc</code> volver a la grilla · teclas multimedia ⏯ ⏭ ⏮ ⏹.</p>
     <textarea id="urls" spellcheck="false" placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX&#10;https://youtu.be/XXXXXXXXXXX&#10;https://www.youtube.com/channel/UCxxxxxxxxxxxxxxxxxxxxxx&#10;@NombreDelCanal&#10;http://192.168.1.50:8080/mjpg/video.mjpg"></textarea>
     <div class="fila">
       <label title="De dónde lee el sonido el visualizador. 'Mezcla estéreo' entrega lo que suena en el PC.">Entrada del visualizador
@@ -123,6 +145,15 @@
         <button class="btn peligro" id="btnImportarReemplazar" title="Borra lo actual y deja exactamente lo del archivo">Reemplazar todo</button>
         <button class="btn secundario" id="btnImportarCancelar">✕</button>
       </span>
+    </div>
+    <div class="fila" id="filaCuenta">
+      <span class="etiqueta-fila">Cuenta atrás</span>
+      <label title="Hora a la que entras: la salida es esta hora más la jornada del día">Entrada
+        <input type="time" id="caEntrada" value="07:49" style="background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"></label>
+      <label title="Horas de jornada de lunes a jueves">Jornada L–J
+        <input type="number" id="caSemana" min="0" max="24" step="0.5" value="9" style="width:56px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"> h</label>
+      <label title="Horas de jornada el viernes">Viernes
+        <input type="number" id="caViernes" min="0" max="24" step="0.5" value="8" style="width:56px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"> h</label>
     </div>
     <div id="aviso"></div>
     <div class="fila">
@@ -178,27 +209,28 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261022o"></script>
-<script src="js/urls.js?v=20261022o"></script>
-<script src="js/grilla.js?v=20261022o"></script>
-<script src="js/favoritos.js?v=20261022o"></script>
-<script src="js/reproductor.js?v=20261022o"></script>
-<script src="js/audio.js?v=20261022o"></script>
-<script src="js/visualizador.js?v=20261022o"></script>
-<script src="js/pantalla.js?v=20261022o"></script>
-<script src="js/navegacion.js?v=20261022o"></script>
-<script src="js/carrusel.js?v=20261022o"></script>
-<script src="js/ampliar.js?v=20261022o"></script>
-<script src="js/pausa.js?v=20261022o"></script>
-<script src="js/panel.js?v=20261022o"></script>
-<script src="js/respaldo.js?v=20261022o"></script>
-<script src="js/camaras.js?v=20261022o"></script>
-<script src="js/buscar.js?v=20261022o"></script>
-<script src="js/externos.js?v=20261022o"></script>
-<script src="js/directos.js?v=20261022o"></script>
-<script src="js/sincronizar.js?v=20261022o"></script>
-<script src="js/teclas.js?v=20261022o"></script>
-<script src="js/superfav.js?v=20261022o"></script>
-<script src="js/main.js?v=20261022o"></script>
+<script src="js/config.js?v=20261022p"></script>
+<script src="js/urls.js?v=20261022p"></script>
+<script src="js/grilla.js?v=20261022p"></script>
+<script src="js/favoritos.js?v=20261022p"></script>
+<script src="js/reproductor.js?v=20261022p"></script>
+<script src="js/audio.js?v=20261022p"></script>
+<script src="js/visualizador.js?v=20261022p"></script>
+<script src="js/pantalla.js?v=20261022p"></script>
+<script src="js/navegacion.js?v=20261022p"></script>
+<script src="js/carrusel.js?v=20261022p"></script>
+<script src="js/ampliar.js?v=20261022p"></script>
+<script src="js/pausa.js?v=20261022p"></script>
+<script src="js/panel.js?v=20261022p"></script>
+<script src="js/respaldo.js?v=20261022p"></script>
+<script src="js/camaras.js?v=20261022p"></script>
+<script src="js/buscar.js?v=20261022p"></script>
+<script src="js/externos.js?v=20261022p"></script>
+<script src="js/directos.js?v=20261022p"></script>
+<script src="js/sincronizar.js?v=20261022p"></script>
+<script src="js/teclas.js?v=20261022p"></script>
+<script src="js/superfav.js?v=20261022p"></script>
+<script src="js/cuentaatras.js?v=20261022p"></script>
+<script src="js/main.js?v=20261022p"></script>
 </body>
 </html>

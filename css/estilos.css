@@ -466,3 +466,80 @@ body.modo-audio .celda .superfav { top: 50%; transform: translateY(-50%); right:
 /* No tapa la tira de videos cuando está abierta, ni la escena del visualizador */
 body.tira-abierta #superFav, body.solo-visual #superFav { display: none; }
 #barra-sup #btnSuperFav.activo { background: var(--oro); color: #1b1b1e; }
+
+/* Cuenta atrás (esquina superior izquierda): el mismo reloj de paletas de salida.html, a escala.
+   En el original las medidas van en vw porque ocupa toda la pantalla; aquí todo es proporcional al tamaño de
+   los números (--fs), así se ve igual pero chico. Equivalencias: 16vw del original = 1 --fs. */
+#cuentaAtras {
+  position: fixed; top: 0.6vh; left: 1.2vw; z-index: 16; display: none;
+  --fs: max(22px, 3vw);                 /* tamaño de los números */
+  --h: calc(var(--fs) * 1.3);           /* alto de la tarjeta */
+  --r: calc(var(--fs) * 0.05);          /* radio de las esquinas (0.8vw de 16vw) */
+  padding: calc(var(--fs) * 0.18) calc(var(--fs) * 0.22) 0;
+  background: radial-gradient(ellipse at center, rgba(28,28,28,.82), rgba(10,10,10,.82));
+  border-radius: calc(var(--fs) * 0.12);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #fff;
+  pointer-events: none;
+}
+#cuentaAtras.visible { display: block; }
+body.solo-visual #cuentaAtras { display: none; }
+#cuentaAtras .countdown {
+  display: flex; gap: calc(var(--fs) * 0.094); justify-content: center;
+  padding-bottom: calc(var(--fs) * 0.32);   /* espacio para las etiquetas */
+}
+#cuentaAtras .time-block { position: relative; width: calc(var(--h) * 1.45); }   /* misma proporción de tarjeta que el original */
+#cuentaAtras .flip {
+  position: relative; height: var(--h); perspective: calc(var(--h) * 4);
+  border-radius: var(--r);
+  box-shadow: 0 calc(var(--fs) * 0.0375) calc(var(--fs) * 0.094) rgba(0,0,0,0.6);
+  transition: box-shadow 0.4s ease;
+}
+#cuentaAtras .time-block.overtime .flip {
+  box-shadow: 0 calc(var(--fs) * 0.0375) calc(var(--fs) * 0.094) rgba(0,0,0,0.6), 0 0 0 1px rgba(255, 60, 60, 0.45);
+}
+#cuentaAtras .half { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden; backface-visibility: hidden; }
+#cuentaAtras .half.top {
+  top: 0; border-radius: var(--r) var(--r) 0 0;
+  background: linear-gradient(to bottom, #2f2f2f, #282828);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); transform-origin: bottom;
+}
+#cuentaAtras .half.bottom {
+  bottom: 0; border-radius: 0 0 var(--r) var(--r);
+  background: linear-gradient(to bottom, #222, #1c1c1c); transform-origin: top;
+}
+#cuentaAtras .half span {
+  display: block; height: var(--h); line-height: var(--h); text-align: center;
+  font-family: 'Helvetica Neue', 'Segoe UI Light', 'Segoe UI', Arial, sans-serif;
+  font-size: var(--fs); font-weight: 200; color: #ececec; letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums; transition: color 0.4s ease;
+}
+#cuentaAtras .half.bottom span { transform: translateY(-50%); }
+#cuentaAtras .flip.overtime .half span { color: #ff5a5a; }
+/* paletas que giran al cambiar el número */
+#cuentaAtras .half.leaf { z-index: 3; }
+#cuentaAtras .half.top.leaf { animation: caFlipTop 0.3s ease-in forwards; }
+#cuentaAtras .half.bottom.leaf { transform: rotateX(90deg); animation: caFlipBottom 0.3s ease-out 0.3s forwards; }
+@keyframes caFlipTop { from { transform: rotateX(0deg); filter: brightness(1); } to { transform: rotateX(-90deg); filter: brightness(0.6); } }
+@keyframes caFlipBottom { from { transform: rotateX(90deg); filter: brightness(1.4); } to { transform: rotateX(0deg); filter: brightness(1); } }
+/* línea de corte horizontal */
+#cuentaAtras .flip::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  height: max(2px, calc(var(--fs) * 0.016)); transform: translateY(-50%); background: #0a0a0a; z-index: 5;
+}
+/* bisagras en los costados */
+#cuentaAtras .flip::after {
+  content: ''; position: absolute; top: 50%;
+  left: calc(var(--fs) * -0.019); right: calc(var(--fs) * -0.019);
+  height: calc(var(--fs) * 0.1); transform: translateY(-50%);
+  --b: calc(var(--fs) * 0.0375);
+  background: linear-gradient(to right, #3a3a3a 0, #111 var(--b), transparent var(--b),
+                              transparent calc(100% - var(--b)), #111 calc(100% - var(--b)), #3a3a3a 100%);
+  border-radius: calc(var(--fs) * 0.0125); z-index: 6;
+}
+#cuentaAtras .time-label {
+  position: absolute; top: 100%; left: 0; right: 0; text-align: center;
+  margin-top: calc(var(--fs) * 0.06);
+  font-size: max(9px, calc(var(--fs) * 0.17));
+  text-transform: uppercase; letter-spacing: 2px; opacity: 0.4;
+}
+#barra-sup #btnCuenta.activo { background: #2cb67d; color: #0a0a0a; }

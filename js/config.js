@@ -25,6 +25,7 @@ let config = {
   favoritos: [], vistaFav: false,
   superFav: '',          // super favorito: una sola línea entre todas las listas (miniatura en la esquina)
   superFavVisible: false,
+  cuentaAtras: { entrada: '07:49', semana: 9, viernes: 8, visible: false },   // cuenta atrás hasta la salida
   autoplay: true, mute: true, modoAudio: false,
   fade: 7,      // segundos de fundido al pasar el audio de un video a otro (0 = sin fundido)
   fadeImg: 1.5, // segundos de fundido de imagen al cambiar de video ampliado (0 = sin fundido)
@@ -80,6 +81,7 @@ function normalizarConfig() {
   if (!config.handles || typeof config.handles !== 'object') config.handles = {};
   if (!config.volumenes || typeof config.volumenes !== 'object') config.volumenes = {};
   if (typeof config.superFav !== 'string') config.superFav = '';
+  if (!config.cuentaAtras || typeof config.cuentaAtras !== 'object') config.cuentaAtras = Object.assign({}, CONFIG_INICIAL.cuentaAtras);
 }
 
 // ---------- Nombres memorizados ----------
