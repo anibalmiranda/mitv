@@ -5,7 +5,14 @@ rem  Multi YouTube - actualizar a la ultima version de GitHub
 rem  Trae la version mas nueva de github.com/anibalmiranda/mitv.
 rem  Tus listas, favoritos y ajustes no se tocan (viven en el navegador).
 rem ============================================================
-cd /d "%~dp0"
+
+rem Corre desde una copia en TEMP: al actualizar, este mismo archivo puede cambiar,
+rem y cmd falla si el .bat que esta leyendo se modifica a medio camino.
+if /i not "%~1"=="--desde-temp" (
+  copy /y "%~f0" "%TEMP%\mitv-actualizar.bat" >nul
+  "%TEMP%\mitv-actualizar.bat" --desde-temp "%~dp0."
+)
+cd /d "%~2"
 
 git --version >nul 2>nul || goto :singit
 if not exist ".git" goto :sinrepo

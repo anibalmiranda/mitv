@@ -6,7 +6,14 @@ rem  Si una version nueva falla, regresa a una anterior.
 rem  Para volver a la mas nueva, abre actualizar.bat.
 rem  Tus listas, favoritos y ajustes no se tocan (viven en el navegador).
 rem ============================================================
-cd /d "%~dp0"
+
+rem Corre desde una copia en TEMP: al cambiar de version, este mismo archivo puede cambiar,
+rem y cmd falla si el .bat que esta leyendo se modifica a medio camino.
+if /i not "%~1"=="--desde-temp" (
+  copy /y "%~f0" "%TEMP%\mitv-volver-atras.bat" >nul
+  "%TEMP%\mitv-volver-atras.bat" --desde-temp "%~dp0."
+)
+cd /d "%~2"
 
 git --version >nul 2>nul || goto :singit
 if not exist ".git" goto :sinrepo
@@ -22,6 +29,8 @@ set /p "VERSION=  Escribe el codigo de la version (Enter = la anterior a la actu
 if not defined VERSION set "VERSION=HEAD~1"
 
 git rev-parse --verify --quiet "%VERSION%^{commit}" >nul || goto :noexiste
+rem Las versiones anteriores a estos .bat no traen actualizar.bat: despues no se podria volver a la nueva
+git cat-file -e "%VERSION%:actualizar.bat" 2>nul || goto :muyvieja
 git reset --hard --quiet "%VERSION%" || goto :error
 echo.
 echo   Listo, ahora tienes:
@@ -33,6 +42,10 @@ goto :fin
 
 :noexiste
 echo   No existe una version "%VERSION%". Copia el codigo tal como aparece en la lista.
+goto :fin
+
+:muyvieja
+echo   Esa version es anterior a actualizar.bat: no se puede volver tan atras.
 goto :fin
 
 :cambios
