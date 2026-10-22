@@ -29,8 +29,9 @@ set /p "VERSION=  Escribe el codigo de la version (Enter = la anterior a la actu
 if not defined VERSION set "VERSION=HEAD~1"
 
 git rev-parse --verify --quiet "%VERSION%^{commit}" >nul || goto :noexiste
-rem Las versiones anteriores a estos .bat no traen actualizar.bat: despues no se podria volver a la nueva
-git cat-file -e "%VERSION%:actualizar.bat" 2>nul || goto :muyvieja
+rem Solo versiones cuyo actualizar.bat corre desde TEMP: con uno anterior (o sin el) no se podria
+rem volver bien a la nueva
+git cat-file -p "%VERSION%:actualizar.bat" 2>nul | findstr /c:"--desde-temp" >nul || goto :muyvieja
 git reset --hard --quiet "%VERSION%" || goto :error
 echo.
 echo   Listo, ahora tienes:
@@ -45,7 +46,7 @@ echo   No existe una version "%VERSION%". Copia el codigo tal como aparece en la
 goto :fin
 
 :muyvieja
-echo   Esa version es anterior a actualizar.bat: no se puede volver tan atras.
+echo   Esa version es demasiado antigua (su actualizar.bat no sirve para volver): elige una mas nueva.
 goto :fin
 
 :cambios
