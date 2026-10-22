@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Pruebas de integración · Multi YouTube</title>
+<style>body { font: 13px Consolas, monospace; background: #111; color: #ddd; margin: 0; } #resultado { display: none; }
+iframe { width: 1280px; height: 720px; border: 0; display: block; }</style>
+</head>
+<body>
+<pre id="legible">corriendo…</pre>
+<pre id="resultado"></pre>
+<script src="marco.js"></script>
+<script>
+// La aplicación completa en un iframe, con datos de prueba. Se corre con pruebas/correr.py, que usa un navegador sin
+// interfaz con un perfil temporal, sin acceso a internet y en otro puerto: nunca toca tus listas ni tu archivo de datos.
+// Por seguridad no corre en el puerto del servidor real ni sin ?aislado=1.
+if (location.port === '18090' || !/aislado=1/.test(location.search)) {
+  document.getElementById('legible').textContent = 'Estas pruebas se corren con probar.bat (en un navegador aislado). Abiertas aquí borrarían tus datos.';
+  throw new Error('no aislado');
+}
+const U = i => 'https://www.youtube.com/watch?v=' + i;
+const V = ['aaaaaaaaaaa', 'bbbbbbbbbbb', 'ccccccccccc', 'ddddddddddd'];
+const CAMARA = 'http://10.255.255.1/video.mjpg';
+localStorage.clear();
+localStorage.setItem('multiyoutube.config.v1', JSON.stringify({
+  listas: { 'A': [U(V[0]), U(V[1]), U(V[2]), '# comentario', 'esto no es url', CAMARA], 'B': [U(V[2]), U(V[3]), U(V[0])] },
+  actual: 'A', mute: true, fade: 0, fadeImg: 0, guardado: Date.now()
+}));
+const f = document.createElement('iframe');
+f.src = '../index.html';
+document.body.appendChild(f);
+
+let w, d;
+const c = () => [...d.querySelectorAll('#contenedor .celda')].sort((a, b) => a.style.order - b.style.order);
+const conAudio = () => c().findIndex(x => x.dataset.mute === '0');
+const tecla = k => d.dispatchEvent(new w.KeyboardEvent('keydown', { key: k, bubbles: true }));
+const cargados = () => c().filter(x => x.dataset.tipo !== 'camara' && x.querySelector('iframe') &&
+                                      /^https:\/\//.test(x.querySelector('iframe').getAttribute('src') || '')).length;
+const cambiarLista = n => { const s = d.getElementById('selLista'); s.value = n; s.dispatchEvent(new w.Event('change')); };
+
+prueba('la grilla arma un cuadro por línea y guarda aparte los comentarios', () => {
+  igual(c().length, 5);
+  igual(w.eval('comentarios'), ['# comentario']);
+  cierto(c()[3].classList.contains('error'), 'la línea mala queda marcada');
+  igual(c()[4].dataset.tipo, 'camara');
+});
+prueba('carga escalonada: todos los videos terminan cargados', () => igual(cargados(), 3));
+prueba('audio exclusivo: uno a la vez', () => {
+  w.alternarAudio(c()[1]); igual(conAudio(), 1);
+  w.alternarAudio(c()[0]); igual(conAudio(), 0);
+  igual(c().filter(x => x.dataset.mute === '0').length, 1);
+});
+prueba('ni la cámara ni la línea mala reciben el audio', () => {
+  w.alternarAudio(c()[4]); igual(conAudio(), 0);
+  igual(w.puedeSonar(c()[4]), false);
+});
+prueba('tecla M silencia todo y lo devuelve al mismo', () => {
+  tecla('m'); igual(conAudio(), -1);
+  tecla('m'); igual(conAudio(), 0);
+});
+prueba('teclas 1 a 9 van a ese video', () => {
+  tecla('3'); igual(conAudio(), 2);
+  tecla('9'); cierto(/No hay un video 9/.test(d.getElementById('indicador').textContent));
+});
+prueba('volumen por video (se redondea de 5 en 5 y se recuerda)', () => {
+  w.fijarVolumen(c()[2], 63);
+  igual(w.eval('config.volumenes["video:' + V[2] + '"]'), 65);
+  igual(w.volumenDe(c()[2]), 65);
+  w.fijarVolumen(c()[2], 100);
+  igual(w.eval('config.volumenes["video:' + V[2] + '"]'), undefined);
+});
+prueba('favoritos: marcar y quitar', () => {
+  w.alternarFav(c()[0]); cierto(w.esFav(U(V[0])));
+  w.alternarFav(c()[0]); cierto(!w.esFav(U(V[0])));
+});
+prueba('ampliar, navegar y volver a la grilla', () => {
+  w.cambiarAmpliado(c()[1]); cierto(c()[1].classList.contains('max'));
+  w.navegar(1); cierto(c()[2].classList.contains('max'), 'la flecha pasa al siguiente');
+  w.restaurarTodo(); igual(c().filter(x => x.classList.contains('max')).length, 0);
+});
+prueba('tira de miniaturas', () => {
+  w.abrirTira(); igual(d.querySelectorAll('#tiraItems .item').length, 4, 'tres videos y la cámara');
+  w.cerrarTira(); cierto(!d.body.classList.contains('tira-abierta'));
+});
+prueba('carrusel: inicia y se detiene', () => {
+  w.iniciarCarrusel(); cierto(d.body.classList.contains('carrusel-activo'));
+  w.detenerCarrusel(); cierto(!d.body.classList.contains('carrusel-activo'));
+  w.restaurarTodo();
+});
+prueba('modo liviano: solo N videos en movimiento (el que suena siempre)', async () => {
+  w.eval('config.maxActivos = 2'); w.actualizarCarga();
+  igual(cargados(), 2);
+  cierto(!c()[conAudio()].classList.contains('dormida'), 'el que suena no duerme');
+  w.eval('config.maxActivos = 0'); w.actualizarCarga();
+  await espera(2000);
+  igual(cargados(), 3);
+});
+prueba('ahorro por inactividad: solo sigue el que suena, y vuelve con actividad', async () => {
+  w.eval('ultimaActividad = 0'); w.revisarAhorro();
+  cierto(w.eval('enAhorro'));
+  igual(cargados(), 1);
+  w.registrarActividad({ type: 'keydown', stopImmediatePropagation() {} });
+  cierto(!w.eval('enAhorro'));
+  await espera(2500);
+  igual(cargados(), 3);
+});
+prueba('al cambiar de lista, los videos repetidos no se recargan', async () => {
+  c().forEach(x => { const i = x.querySelector('iframe'); if (i) i._marca = x.dataset.linea; });
+  cambiarLista('B');
+  await espera(300);
+  const ids = c().map(x => x.dataset.linea.slice(-11));
+  igual(ids, [V[2], V[3], V[0]]);
+  igual(c().map(x => !!x.querySelector('iframe')._marca), [true, false, true]);
+  cambiarLista('A');
+  await espera(1500);
+});
+prueba('super favorito: miniatura sin audio con la tecla S', () => {
+  c()[0].querySelector('.superfav').click();
+  const v = d.getElementById('superFav');
+  cierto(v.classList.contains('visible'));
+  igual(new URL(v.querySelector('iframe').src).searchParams.get('mute'), '1');
+  tecla('s'); cierto(!v.classList.contains('visible'));
+  tecla('s'); cierto(v.classList.contains('visible'));
+  c()[0].querySelector('.superfav').click(); cierto(!v.classList.contains('visible'));
+});
+prueba('audio de fondo: la grilla no puede sonar mientras está activo', () => {
+  const espia = d.createElement('iframe');
+  d.getElementById('contenedor').appendChild(espia);
+  const recibidas = [];
+  espia.contentWindow.postMessage = m => recibidas.push(JSON.parse(m).func);
+  c()[1].querySelector('.fondo').click();
+  cierto(w.eval('fondoActivo'));
+  igual(recibidas, ['mute'], 'al activarlo se silencian todos los reproductores de la grilla');
+  recibidas.length = 0;
+  cierto(/loop=1/.test(d.querySelector('#audioFondo iframe').src), 'se repite al terminar');
+  w.comandoYT(espia, 'unMute'); w.comandoYT(espia, 'setVolume', [80]);
+  igual(recibidas, ['mute'], 'quitar silencio se cambia por silenciar y setVolume se ignora');
+  tecla('b'); cierto(!w.eval('fondoActivo'));
+  recibidas.length = 0; w.comandoYT(espia, 'unMute');
+  igual(recibidas, ['unMute']);
+  espia.remove();
+  w.alternarFondoCelda(c()[1]);
+  igual(w.eval('config.fondoAudio'), '');
+});
+prueba('cuenta atrás: amarillo de 13 a 14 y rojo al llegar a cero', () => {
+  tecla('t'); cierto(d.getElementById('cuentaAtras').classList.contains('visible'));
+  w.eval('config.cuentaAtras.entrada = "08:00"; config.cuentaAtras.semana = 9');
+  const Real = w.Date;
+  const a = (h, m) => {   // jueves 22-10-2026 a esa hora (salida 17:00)
+    const fijo = new Real(2026, 9, 22, h, m, 0).getTime();
+    w.Date = class extends Real { constructor(...x) { if (x.length) super(...x); else super(fijo); } static now() { return fijo; } };
+    w.tickCuenta();
+    const t = d.getElementById('caHoras');
+    return [t.dataset.value + ':' + d.getElementById('caMinutos').dataset.value, t.classList.contains('almuerzo'), t.classList.contains('overtime')];
+  };
+  try {
+    igual(a(12, 59), ['04:01', false, false]);
+    igual(a(13, 30), ['03:30', true, false]);
+    igual(a(14, 0), ['03:00', false, false]);
+    igual(a(17, 30), ['00:30', false, true]);
+  } finally { w.Date = Real; }
+  tecla('t'); cierto(!d.getElementById('cuentaAtras').classList.contains('visible'));
+});
+prueba('video bloqueado fuera de YouTube (101/150): cuadro útil y sin audio', () => {
+  w.marcarCaido(c()[2], 150);
+  cierto(c()[2]._externo && c()[2].querySelector('.aviso-externo'));
+  igual(w.puedeSonar(c()[2]), false);
+  cierto(w.eval('config.nombres["video:' + V[2] + '"].externo'), 'se recuerda');
+  w.reintentarAqui(c()[2]);
+  cierto(!c()[2]._externo && !c()[2].querySelector('.aviso-externo'));
+});
+prueba('panel de estado (tecla E) y Esc para cerrar', () => {
+  tecla('e');
+  cierto(d.getElementById('fondoEstado').classList.contains('abierto'));
+  igual(d.querySelectorAll('.estado-fila').length, 5);
+  tecla('Escape');
+  cierto(!d.getElementById('fondoEstado').classList.contains('abierto'));
+});
+prueba('aviso si la lectura de YouTube falla, y se puede cerrar', () => {
+  w.eval('servidorOk = true; saludActual = { estado: "falla", detalle: "prueba", desde: 1, revisado: 1 }');
+  w.pintarSalud();
+  const av = d.getElementById('avisoSistema');
+  cierto(av.classList.contains('visible'));
+  av.querySelector('button').click();
+  cierto(!av.classList.contains('visible'));
+  w.eval('servidorOk = false; saludActual = null'); w.pintarSalud();
+});
+prueba('la línea mala explica qué se acepta', () => cierto(/Solo se aceptan URLs de YouTube/.test(c()[3].textContent)));
+
+f.onload = async () => {
+  w = f.contentWindow; d = f.contentDocument;
+  await espera(2500);   // carga escalonada de los tres videos
+  correrPruebas();
+};
+</script>
+</body>
+</html>

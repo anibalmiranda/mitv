@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Pruebas unitarias · Multi YouTube</title>
+<style>body { font: 13px Consolas, monospace; background: #111; color: #ddd; } #resultado { display: none; }</style>
+</head>
+<body>
+<h3>Pruebas unitarias: reconocimiento de URLs (urls.js)</h3>
+<pre id="legible">corriendo…</pre>
+<pre id="resultado"></pre>
+<!-- Solo config.js y urls.js: no tocan la página ni guardan nada -->
+<script src="../js/config.js"></script>
+<script src="../js/urls.js"></script>
+<script src="marco.js"></script>
+<script>
+const ID = 'dQw4w9WgXcQ', UC = 'UCSJ4gkVC6NrvII8umztf0Ow';
+const p = linea => { const r = parsear(linea); return r && Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined && v !== 0 && v !== '' && v !== false)); };
+
+prueba('ID pelado de 11 caracteres', () => igual(p(ID), { tipo: 'video', id: ID }));
+prueba('watch?v= con tiempo', () => igual(p('https://www.youtube.com/watch?v=' + ID + '&t=90'), { tipo: 'video', id: ID, inicio: 90 }));
+prueba('youtu.be sin https y con 1m30s', () => igual(p('youtu.be/' + ID + '?t=1m30s'), { tipo: 'video', id: ID, inicio: 90 }));
+prueba('m.youtube.com y music.youtube.com', () => {
+  igual(p('https://m.youtube.com/watch?v=' + ID), { tipo: 'video', id: ID });
+  igual(p('https://music.youtube.com/watch?v=' + ID), { tipo: 'video', id: ID });
+});
+prueba('/live/ marca pista de directo', () => igual(p('https://www.youtube.com/live/' + ID), { tipo: 'video', id: ID, pistaVivo: true }));
+prueba('/shorts/ y /embed/', () => {
+  igual(p('https://www.youtube.com/shorts/' + ID), { tipo: 'video', id: ID });
+  igual(p('https://www.youtube.com/embed/' + ID), { tipo: 'video', id: ID });
+});
+prueba('canal por /channel/ y por embed/live_stream', () => {
+  igual(p('https://www.youtube.com/channel/' + UC), { tipo: 'canal', id: UC });
+  igual(p('https://www.youtube.com/embed/live_stream?channel=' + UC), { tipo: 'canal', id: UC });
+});
+prueba('playlists y Mix', () => {
+  igual(p('https://www.youtube.com/playlist?list=PL123'), { tipo: 'lista', id: 'PL123' });
+  igual(p('https://www.youtube.com/watch?v=' + ID + '&list=PL123'), { tipo: 'lista', id: 'PL123', video: ID });
+  igual(p('https://www.youtube.com/watch?v=' + ID + '&list=RD' + ID).mix, true);
+});
+prueba('comentarios y líneas vacías se ignoran', () => { igual(parsear('# hola'), null); igual(parsear('   '), null); });
+prueba('@handle sin resolver queda pendiente', () => {
+  const r = parsear('@AlgunCanalNuevo');
+  igual([r.tipo, r.ruta, r.pendiente], ['error', '@alguncanalnuevo', true]);
+});
+prueba('@handle ya conocido es un canal (sin importar mayúsculas)', () => {
+  config.handles['@lofigirl'] = UC;
+  igual(p('@LofiGirl'), { tipo: 'canal', id: UC, ruta: '@lofigirl' });
+  igual(p('https://www.youtube.com/@LofiGirl/live'), { tipo: 'canal', id: UC, ruta: '@lofigirl' });
+  igual(parsear('youtube.com/c/nombre').ruta, 'c/nombre');
+});
+prueba('cámaras IP: cualquier http(s) que no sea YouTube', () => {
+  igual(p('http://200.54.42.127:8090/mjpg/video.mjpg'), { tipo: 'camara', id: 'http://200.54.42.127:8090/mjpg/video.mjpg' });
+  igual(parsear('200.54.42.127:8090/mjpg/video.mjpg').tipo, 'error', 'sin http:// no se toma como cámara');
+});
+prueba('texto que no es URL da error con motivo', () => {
+  const r = parsear('esto no es url');
+  igual(r.tipo, 'error');
+  cierto(/YouTube/.test(r.motivo), 'el motivo explica qué se acepta');
+});
+prueba('clave: la misma identidad sin importar cómo se escribió', () => {
+  const k = clave(ID);
+  ['https://www.youtube.com/watch?v=' + ID, 'youtu.be/' + ID + '?t=5', 'https://www.youtube.com/live/' + ID].forEach(l => igual(clave(l), k, l));
+  igual(clave('# comentario'), null);
+  igual(clave('esto no es url'), null);
+});
+prueba('tiempo en ?t= con horas, minutos y segundos', () => igual(parsear('https://youtu.be/' + ID + '?t=1h2m3s').inicio, 3723));
+prueba('urlEmbed de un video', () => {
+  const u = new URL(urlEmbed({ tipo: 'video', id: ID, inicio: 42 }, true, false));
+  igual(u.pathname, '/embed/' + ID);
+  igual([u.searchParams.get('mute'), u.searchParams.get('autoplay'), u.searchParams.get('start'), u.searchParams.get('enablejsapi')], ['1', '0', '42', '1']);
+});
+prueba('urlEmbed de canal, playlist y Mix', () => {
+  igual(new URL(urlEmbed({ tipo: 'canal', id: UC }, true, true)).searchParams.get('channel'), UC);
+  igual(new URL(urlEmbed({ tipo: 'lista', id: 'PL1' }, true, true)).pathname, '/embed/videoseries');
+  igual(new URL(urlEmbed({ tipo: 'lista', id: 'RD' + ID, mix: true }, true, true)).pathname, '/embed/' + ID);
+});
+prueba('nombres iniciales', () => {
+  igual(nombreInicial({ tipo: 'camara', id: 'http://1.2.3.4:81/x.mjpg' }, 0), 'Cámara 1.2.3.4:81');
+  igual(nombreInicial({ tipo: 'canal', id: UC, ruta: '@lofigirl' }, 0), 'Canal en vivo @lofigirl');
+  igual(nombreInicial({ tipo: 'video', id: ID }, 2), 'Video 3 (' + ID + ')');
+});
+prueba('punto al azar: dentro del video y no en los muy cortos', () => {
+  igual(segundoAleatorio(0), 0);
+  igual(segundoAleatorio(25), 0);
+  for (let i = 0; i < 300; i++) { const s = segundoAleatorio(100); cierto(s >= 10 && s <= 90, 'fuera de rango: ' + s); }
+});
+
+correrPruebas();
+</script>
+</body>
+</html>
