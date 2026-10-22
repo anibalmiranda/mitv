@@ -7,10 +7,11 @@ function pintarAudio(celda) {
   const silenciado = celda.dataset.mute !== '0';   // los cuadros con error no tienen dataset.mute: nunca "suenan"
   celda.classList.toggle('con-audio', !silenciado);
   const ico = celda.querySelector('.icono-audio');
-  if (ico) ico.textContent = silenciado ? '🔇' : '🔊';
+  if (ico) ico.textContent = silenciado ? '🔇' : (fondoActivo ? '🎵' : '🔊');
   const est = celda.querySelector('.fila-audio .estado');
   if (est && celda.dataset.tipo === 'camara') { est.textContent = '📷 cámara (sin audio)'; return; }
-  if (est) est.textContent = silenciado ? (config.modoAudio ? '⏸ clic para escuchar' : '🔇 clic para escuchar') : '🔊 sonando';
+  if (est) est.textContent = silenciado ? (config.modoAudio ? '⏸ clic para escuchar' : '🔇 clic para escuchar')
+                                        : (fondoActivo ? '🎵 suena el audio de fondo' : '🔊 sonando');
 }
 // Rampa de volumen (pasos cada 100 ms) para el fundido entre audios
 function detenerRampa(celda) {
@@ -129,6 +130,7 @@ function fijarVolumen(celda, v, avisar) {
 }
 // Teclas + y −: ajustan el volumen del que está sonando
 function cambiarVolumenActual(paso) {
+  if (fondoActivo) { cambiarVolumenFondo(paso); return; }
   const c = celdas.find(x => x.dataset.mute === '0');
   if (!c) { mostrarMensaje('No hay ningún video sonando'); return; }
   fijarVolumen(c, volumenDe(c) + paso, true);
@@ -186,6 +188,7 @@ function olvidarSilencioGeneral() {
   pintarMuteGeneral();
 }
 btnMuteGeneral.addEventListener('click', () => {
+  if (fondoActivo) { alternarSilencioFondo(); return; }   // con audio de fondo, M / ⏯ actúan sobre él
   if (silencioGeneral) {
     const c = silencioGeneral;
     olvidarSilencioGeneral();

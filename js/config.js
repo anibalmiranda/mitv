@@ -25,6 +25,8 @@ let config = {
   favoritos: [], vistaFav: false,
   superFav: '',          // super favorito: una sola línea entre todas las listas (miniatura en la esquina)
   superFavVisible: false,
+  fondoAudio: '',        // audio de fondo: una sola línea entre todas las listas (banda sonora de la grilla)
+  fondoActivo: false,
   cuentaAtras: { entrada: '07:49', semana: 9, viernes: 8, visible: false },   // cuenta atrás hasta la salida
   autoplay: true, mute: true, modoAudio: false,
   fade: 7,      // segundos de fundido al pasar el audio de un video a otro (0 = sin fundido)
@@ -53,6 +55,7 @@ const MAX_NOMBRES = 800;
 let celdas = [];        // celdas en el orden visual
 let comentarios = [];   // líneas '#' de la lista actual (se conservan al reordenar)
 let creandoLista = false;
+let fondoActivo = false;   // audio de fondo sonando (fondo.js): la grilla queda en silencio
 let datosLocalesAlCargar = false;   // el navegador ya tenía datos guardados al abrir la página
 
 // ---------- Persistencia ----------
@@ -81,6 +84,7 @@ function normalizarConfig() {
   if (!config.handles || typeof config.handles !== 'object') config.handles = {};
   if (!config.volumenes || typeof config.volumenes !== 'object') config.volumenes = {};
   if (typeof config.superFav !== 'string') config.superFav = '';
+  if (typeof config.fondoAudio !== 'string') config.fondoAudio = '';
   if (!config.cuentaAtras || typeof config.cuentaAtras !== 'object') config.cuentaAtras = Object.assign({}, CONFIG_INICIAL.cuentaAtras);
 }
 

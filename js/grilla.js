@@ -85,6 +85,7 @@ function render(reutilizar) {
       if (bQuitar) bQuitar.title = config.vistaFav ? 'Quitar de favoritos' : 'Quitar';
       pintarFav(previa);
       pintarSuperFavCelda(previa);
+      pintarFondoCelda(previa);
       pintarAudio(previa);
       previa.style.order = celdas.length;
       celdas.push(previa);
@@ -218,6 +219,14 @@ function render(reutilizar) {
       bSuper.addEventListener('click', () => alternarSuperFav(celda));
       celda.appendChild(bSuper);
 
+      if (!esCamara) {
+        const bFondo = document.createElement('button');
+        bFondo.className = 'fondo';
+        bFondo.textContent = '🎵';
+        bFondo.addEventListener('click', () => alternarFondoCelda(celda));
+        celda.appendChild(bFondo);
+      }
+
       const bMax = document.createElement('button');
       bMax.className = 'maximizar';
       bMax.title = 'Ampliar / miniatura';
@@ -234,6 +243,7 @@ function render(reutilizar) {
 
       pintarFav(celda);
       pintarSuperFavCelda(celda);
+      pintarFondoCelda(celda);
       pintarAudio(celda);
       if (esExterno) marcarExterno(celda);
       idx++;

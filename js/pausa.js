@@ -34,7 +34,7 @@ function aplicarPausaOcultos() {
   const oculta = ventanaOculta();
   let reintentar = false;
   celdas.forEach(c => {
-    const pausar = (activa && v && !v.has(c)) || (oculta && c.dataset.mute !== '0');
+    const pausar = (activa && v && !v.has(c)) || (oculta && (c.dataset.mute !== '0' || fondoActivo));
     if (c.dataset.tipo === 'camara') { c._pausadaFS = !!pausar; return; }   // se corta o reconecta abajo
     const ifr = c.querySelector('iframe');
     if (!ifr) return;

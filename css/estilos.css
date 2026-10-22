@@ -543,3 +543,18 @@ body.solo-visual #cuentaAtras { display: none; }
   text-transform: uppercase; letter-spacing: 2px; opacity: 0.4;
 }
 #barra-sup #btnCuenta.activo { background: #2cb67d; color: #0a0a0a; }
+
+/* Audio de fondo: botón 🎵 en cada cuadro y reproductor oculto */
+.celda .fondo {
+  position: absolute; top: 6px; right: 166px; z-index: 4;
+  width: 26px; height: 26px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(0,0,0,.65); font-size: 13px; line-height: 26px;
+  opacity: 0; transition: opacity .15s; filter: grayscale(1);
+}
+.celda:hover .fondo { opacity: 1; }
+.celda.es-fondo .fondo { opacity: 1; filter: none; background: rgba(44,182,125,.35); }
+.celda.externo .fondo { display: none; }   /* bloqueado fuera de YouTube: tampoco puede sonar de fondo */
+body.modo-audio .celda .fondo { top: 50%; transform: translateY(-50%); right: 138px; }
+#audioFondo { position: fixed; left: -10000px; top: 0; width: 320px; height: 180px; overflow: hidden; }
+#audioFondo iframe { width: 320px; height: 180px; border: 0; }
+#barra-sup #btnFondo.activo { background: #2cb67d; color: #0a0a0a; }

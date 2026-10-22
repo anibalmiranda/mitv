@@ -5,6 +5,13 @@
 // ---------- Comunicación con el reproductor de YouTube (postMessage) ----------
 function comandoYT(iframe, func, args) {
   if (!iframe || !iframe.contentWindow) return;
+  // Con el audio de fondo activo (fondo.js), ningún video de la grilla puede sonar: "quitar silencio" se cambia
+  // por "silenciar" y se ignora setVolume (en el reproductor de YouTube, setVolume también quita el silencio)
+  if (fondoActivo && (func === 'unMute' || func === 'setVolume') && contenedor.contains(iframe)) {
+    if (func === 'setVolume') return;
+    func = 'mute';
+    args = [];
+  }
   iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: func, args: args || [] }), '*');
 }
 // Le pide al reproductor que informe título, autor y estado
@@ -69,7 +76,7 @@ window.addEventListener('message', e => {
   intentarPlaylistAleatoria(celda, ifr, d.info);
   intentarInicioAleatorio(celda, ifr, d.info);
   // Vigilante: si un video que debería estar silenciado informa que está sonando, se vuelve a silenciar
-  if (celda.dataset.mute === '1' && !celda._rampa && d.info.muted === false) {
+  if ((celda.dataset.mute === '1' || fondoActivo) && !celda._rampa && d.info.muted === false) {
     comandoYT(ifr, 'setVolume', [0]);
     comandoYT(ifr, 'mute');
   }

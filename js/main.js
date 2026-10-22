@@ -19,7 +19,7 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Enter' && e.ctrlKey && panelAbierto) guardarPanel();
   // Atajos de una tecla (no mientras escribes en un campo ni con una ventana abierta):
-  //  + / − volumen del que suena · M silenciar todo · S super favorito · T cuenta atrás · F pantalla completa · C carrusel · 1 a 9 ir a ese video
+  //  + / − volumen del que suena · M silenciar todo · S super favorito · T cuenta atrás · B audio de fondo · F pantalla completa · C carrusel · 1 a 9 ir a ese video
   if (!panelAbierto && !buscarAbierto && !enCampo && !e.ctrlKey && !e.altKey && !e.metaKey) {
     const k = e.key.toLowerCase();
     if (k === '+' || k === '=') { e.preventDefault(); cambiarVolumenActual(5); }
@@ -27,6 +27,7 @@ document.addEventListener('keydown', e => {
     if (k === 'm') { e.preventDefault(); btnMuteGeneral.click(); }
     if (k === 's') { e.preventDefault(); alternarVentanaSuperFav(); }
     if (k === 't') { e.preventDefault(); alternarCuenta(); }
+    if (k === 'b') { e.preventDefault(); alternarFondo(); }
     if (k === 'f') { e.preventDefault(); btnPantalla.click(); }
     if (k === 'c') {
       e.preventDefault();
@@ -53,6 +54,7 @@ pintarPantalla();
 render();
 mostrarSuperFav();
 mostrarCuenta();
+aplicarFondo();
 if (!config.vistaFav && !fuente().length && Object.keys(config.listas).length === 1) abrirPanel();
 // Copia en archivo: si es más nueva que la del navegador (p. ej. se borraron sus datos), se recupera
 // (si la página se abrió en la dirección antigua y el servidor está corriendo, primero se muda a la nueva)

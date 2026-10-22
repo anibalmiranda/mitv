@@ -143,6 +143,7 @@ function reemplazarEnConfig(vieja, nueva) {
   if (kVieja && kNueva && config.volumenes[kVieja] != null && config.volumenes[kNueva] == null)
     config.volumenes[kNueva] = config.volumenes[kVieja];   // el volumen ajustado sigue con la URL nueva
   superFavReemplazado(vieja, nueva);
+  fondoReemplazado(vieja, nueva);
   return cambios;
 }
 
