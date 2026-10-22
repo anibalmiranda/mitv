@@ -46,6 +46,18 @@ El repositorio `anibalmiranda/mitv` es público: GitHub Pages lo puede publicar 
   los "GEO" solo funcionan desde España.
 - `tv.m3u8` no se sube a este repositorio (son datos; agregarlo a `.gitignore`).
 
+## Botón "🧹 Comprobar lista" (para cualquier lista, en cualquier momento)
+
+- En el panel de estado (`E`): revisa todas las líneas de la lista que estás viendo (aunque estén dormidas).
+  - YouTube: que el video exista y que su dueño permita verlo fuera de YouTube (detectar antes los 101/150).
+  - Directos terminados: primero buscar el directo actual del canal; solo si no hay, cuenta como caído.
+  - HLS (cuando exista): revisión profunda hasta el primer fragmento. Cámaras: que entreguen imagen.
+- Muestra un resumen ("38 funcionan · 4 no existen · 2 bloqueados…") y el botón "Quitar los que no funcionan".
+- No se borran: quedan **comentadas en la misma lista** con motivo y fecha
+  (`# ✘ 2026-10-22 no existe (404) · https://…`); Mitv ya ignora las líneas con `#` y siguen visibles en el ⚙.
+- "↺ Revisar los descartados": vuelve a probar las líneas comentadas y restaura las que funcionan de nuevo.
+- Usa la misma revisión que el filtro al importar M3U (en `servidor.py`).
+
 ## Otras fuentes en vivo
 
 - **Twitch y Kick:** tienen reproductores incrustables oficiales.
