@@ -84,6 +84,7 @@ function cerrarPanel() {
 
 $('btnNueva').addEventListener('click', () => {
   creandoLista = true;
+  $('btnEliminarGrupo').hidden = true;   // creando una lista nueva: no aplica
   nombreLista.value = nombreLibre('Lista');
   txt.value = '';
   aviso.textContent = 'Nueva lista: ponle nombre, pega las URLs y guarda.';
@@ -95,7 +96,52 @@ function resetEliminar() {
   clearTimeout(timerEliminar);
   btnEliminar.classList.remove('confirmar');
   btnEliminar.textContent = 'Eliminar lista';
+  $('btnEliminarGrupo').classList.remove('confirmar');
+  pintarEliminarGrupo();
 }
+
+// ---------- Eliminar un grupo completo ("TV" con todas sus sub-listas "TV / …") ----------
+// Solo borra las listas "Grupo / …": una lista suelta que se llame igual que el grupo ("TV") no se toca.
+function grupoDe(nombre) { const i = nombre.indexOf(' / '); return i > 0 ? nombre.slice(0, i) : ''; }
+function listasDelGrupo(g) { return Object.keys(config.listas).filter(n => grupoDe(n) === g); }
+function pintarEliminarGrupo() {
+  const b = $('btnEliminarGrupo');
+  const g = !config.vistaFav && !creandoLista ? grupoDe(config.actual) : '';
+  b.hidden = !g;
+  if (g && !b.classList.contains('confirmar'))
+    b.textContent = 'Eliminar grupo "' + g + '" (' + listasDelGrupo(g).length + ' sub-listas)';
+}
+// Los datos de canales de TV (nombre, logo, respaldos) que ya no usa ninguna lista, ni sus descartados comentados
+function limpiarTvSinUso() {
+  const usadas = new Set(lineasGuardadas().map(clave));
+  Object.values(config.listas).forEach(l => l.forEach(x => {
+    const m = x.match(RX_DESCARTE);
+    if (m) usadas.add(clave(m[1]));
+  }));
+  Object.keys(config.tv).forEach(k => { if (!usadas.has(k)) delete config.tv[k]; });
+}
+$('btnEliminarGrupo').addEventListener('click', () => {
+  const b = $('btnEliminarGrupo');
+  const g = grupoDe(config.actual);
+  if (!g) return;
+  if (!b.classList.contains('confirmar')) {
+    b.classList.add('confirmar');
+    b.textContent = '¿Borrar "' + g + '" y sus ' + listasDelGrupo(g).length + ' sub-listas? Clic de nuevo';
+    clearTimeout(timerEliminar);
+    timerEliminar = setTimeout(resetEliminar, 4000);
+    return;
+  }
+  const borrar = listasDelGrupo(g);
+  borrar.forEach(n => { delete config.listas[n]; delete config.ultimos['lista:' + n]; });
+  if (!Object.keys(config.listas).length) config.listas['Principal'] = [];   // siempre queda al menos una
+  limpiarTvSinUso();
+  config.actual = Object.keys(config.listas)[0];
+  guardar();
+  render(true);
+  pintarSelector();
+  cerrarPanel();
+  mostrarMensaje('🗑 Grupo "' + g + '" eliminado (' + borrar.length + ' sub-listas)');
+});
 btnEliminar.addEventListener('click', () => {
   if (creandoLista) { abrirPanel(); return; }   // cancela la creación
   if (Object.keys(config.listas).length <= 1) { aviso.textContent = 'Debe quedar al menos una lista.'; return; }

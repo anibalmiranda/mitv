@@ -222,6 +222,22 @@ prueba('importar M3U sin servidor: una sub-lista por grupo elegido', async () =>
   cambiarLista('A');
   await espera(1500);
 });
+prueba('eliminar un grupo completo no toca la lista suelta con el mismo nombre', () => {
+  w.eval('config.listas["TV"] = ["https://www.youtube.com/watch?v=ttttttttttt"]; config.listas["TV / Uno"] = ["https://x.invalid/1.m3u8"]; ' +
+         'config.tv["hls:https://x.invalid/1.m3u8"] = { nombre: "Uno" }; config.actual = "TV / Uno"; config.vistaFav = false');
+  w.pintarSelector(); w.render(true);
+  w.abrirPanel();
+  const b = d.getElementById('btnEliminarGrupo');
+  cierto(!b.hidden, 'el botón aparece en una sub-lista');
+  cierto(/"TV" \(2 sub-listas\)/.test(b.textContent), b.textContent);   // "TV / Prueba" y "TV / Uno"
+  b.click(); cierto(/Clic de nuevo/.test(b.textContent), 'pide confirmar');
+  b.click();
+  const nombres = Object.keys(w.eval('config.listas'));
+  igual(nombres.filter(n => n.startsWith('TV / ')), [], 'sin sub-listas');
+  cierto(nombres.includes('TV'), 'la lista suelta "TV" sigue');
+  igual(w.eval('config.tv["hls:https://x.invalid/1.m3u8"]'), undefined, 'se limpian los datos de canales sin uso');
+  cambiarLista('A');
+});
 prueba('quitar los que no funcionan: se comentan con motivo y se reconocen como descartados', () => {
   w.eval('config.listas["Z"] = ["https://www.youtube.com/watch?v=zzzzzzzzzzz", "https://www.youtube.com/watch?v=yyyyyyyyyyy"]; config.actual = "Z"');
   w.render(true);
