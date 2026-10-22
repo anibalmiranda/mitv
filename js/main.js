@@ -18,6 +18,11 @@ document.addEventListener('keydown', e => {
     else restaurarTodo();
   }
   if (e.key === 'Enter' && e.ctrlKey && panelAbierto) guardarPanel();
+  // + y − ajustan el volumen del video que suena (se recuerda para ese video)
+  if (!panelAbierto && !buscarAbierto && !enCampo && !e.ctrlKey && !e.altKey) {
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); cambiarVolumenActual(5); }
+    if (e.key === '-') { e.preventDefault(); cambiarVolumenActual(-5); }
+  }
   // Las flechas navegan solo si no estás escribiendo en un campo ni hay una ventana abierta
   if (document.fullscreenElement && !panelAbierto && !buscarAbierto && !enCampo) {
     if (e.key === 'ArrowRight') { e.preventDefault(); navegar(1); }
@@ -36,6 +41,10 @@ pintarPantalla();
 render();
 if (!config.vistaFav && !fuente().length && Object.keys(config.listas).length === 1) abrirPanel();
 // Copia en archivo: si es más nueva que la del navegador (p. ej. se borraron sus datos), se recupera
-sincronizarAlIniciar().then(() => { if (fondo.classList.contains('abierto') && fuente().length) cerrarPanel(); });
+// (si la página se abrió en la dirección antigua y el servidor está corriendo, primero se muda a la nueva)
+mudarseSiHaceFalta().then(mudado => {
+  if (mudado) return;
+  sincronizarAlIniciar().then(() => { if (fondo.classList.contains('abierto') && fuente().length) cerrarPanel(); });
+});
 // Si el visualizador quedó encendido, se reactiva solo (el permiso de la entrada ya está dado)
 if (config.visualActivo) iniciarVisual(true);

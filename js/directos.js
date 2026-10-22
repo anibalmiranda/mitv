@@ -176,8 +176,7 @@ function recargarCelda(celda, linea) {
   if (!item || !ifr) return;
   clearTimeout(celda._timerDirecto);
   celda.dataset.linea = linea;
-  ['_listo', '_videoActual', '_dur', '_durVista', '_durNueva', '_durNuevaVista', '_durAprendida', '_vivoSeguro',
-   '_durPrev', '_durIgual', '_estado', '_estadoPrevio', '_canalPedido', '_directoRevisado'].forEach(k => { celda[k] = null; });
+  olvidarReproductor(celda);
   celda._saltoHecho = true;    // es un directo: no se salta a un punto al azar
   celda._eraDirecto = true;
   delete celda.dataset.inicio;

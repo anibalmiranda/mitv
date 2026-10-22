@@ -93,14 +93,14 @@ function importarReemplazar() {
   const c = respaldoPendiente;
   if (!c) return;
   const base = JSON.parse(JSON.stringify(config));
-  ['listas', 'favoritos', 'ultimos', 'duraciones', 'nombres', 'handles'].forEach(k => { base[k] = Array.isArray(base[k]) ? [] : {}; });
+  ['listas', 'favoritos', 'ultimos', 'duraciones', 'nombres', 'handles', 'volumenes'].forEach(k => { base[k] = Array.isArray(base[k]) ? [] : {}; });
   config = Object.assign(base, c);
   if (!config.listas[config.actual]) config.actual = Object.keys(config.listas)[0];
   if (cantFavs() > MAX_FAV) config.favoritos = config.favoritos.filter(f => clave(f)).slice(0, MAX_FAV);
   if (!config.ultimos || typeof config.ultimos !== 'object') config.ultimos = {};
   if (!config.duraciones || typeof config.duraciones !== 'object') config.duraciones = {};
   if (!config.nombres || typeof config.nombres !== 'object') config.nombres = {};
-  if (!config.handles || typeof config.handles !== 'object') config.handles = {};
+  normalizarConfig();
   terminarImportacion('⬆ Importado: se reemplazó todo con lo del archivo.');
 }
 
@@ -124,7 +124,7 @@ function importarAgregar() {
     config.favoritos.push(f);
     favsNuevos++;
   });
-  ['duraciones', 'nombres', 'handles'].forEach(k => {
+  ['duraciones', 'nombres', 'handles', 'volumenes'].forEach(k => {
     if (!c[k] || typeof c[k] !== 'object') return;
     Object.keys(c[k]).forEach(id => { if (!config[k][id]) config[k][id] = c[k][id]; });
   });

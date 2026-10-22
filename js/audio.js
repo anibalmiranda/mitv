@@ -52,7 +52,7 @@ function fijarAudio(celda, silenciar, fadeMs) {
       // Refuerzo por si alguna orden se perdió en el camino
       setTimeout(() => { if (celda.dataset.mute === '1' && !celda._rampa) comandoYT(ifr, 'mute'); }, 400);
     };
-    if (fadeMs > 0) rampa(celda, celda._vol == null ? 100 : celda._vol, 0, fadeMs, fin);
+    if (fadeMs > 0) rampa(celda, celda._vol == null ? volumenDe(celda) : celda._vol, 0, fadeMs, fin);
     else { detenerRampa(celda); fin(); }
     celda.dataset.mute = '1';
   } else {
@@ -62,20 +62,22 @@ function fijarAudio(celda, silenciar, fadeMs) {
     celda.dataset.mute = '0';
     delete celda.dataset.pendiente;
     olvidarSilencioGeneral();   // volvió a sonar algo: el botón de silenciar todo vuelve a su estado normal
-    if (celdaPendiente && celdaPendiente !== celda) ocultarAvisoRetomar();
+    // El audio fue a otro: el que esperaba retomarse ya no lo recibirá (ni conserva su prioridad de carga)
+    if (celdaPendiente && celdaPendiente !== celda) { delete celdaPendiente.dataset.pendiente; ocultarAvisoRetomar(); }
     guardarUltimo(celda);
     cargarYa(celda);             // si aún esperaba su turno en la carga escalonada, se carga ahora
     programarPausaOcultos();     // con la ventana oculta, el que recibe el audio es el que debe seguir corriendo
+    const vol = volumenDe(celda);   // el volumen guardado para este video (100 si nunca se ajustó)
     if (fadeMs > 0) {
       comandoYT(ifr, 'setVolume', [desde]);
       comandoYT(ifr, 'unMute');
       comandoYT(ifr, 'playVideo');
-      rampa(celda, desde, 100, fadeMs);
+      rampa(celda, desde, vol, fadeMs);
     } else {
       comandoYT(ifr, 'unMute');
-      comandoYT(ifr, 'setVolume', [100]);
+      comandoYT(ifr, 'setVolume', [vol]);
       comandoYT(ifr, 'playVideo');
-      celda._vol = 100;
+      celda._vol = vol;
     }
   }
   pintarAudio(celda);
@@ -92,6 +94,39 @@ function alternarAudio(celda) {
     fijarAudio(celda, true);
     olvidarUltimo();   // silenciaste el que sonaba: al recargar no se retoma nada
   }
+}
+
+// ---------- Volumen propio de cada video ----------
+// Cada video o canal recuerda su volumen (config.volumenes, por clave): así los que suenan fuerte se bajan
+// una vez y quedan parejos con los demás. Los fundidos suben hasta ese volumen en vez de hasta 100.
+const VOLUMEN_MIN = 5;
+function volumenDe(celda) {
+  const v = config.volumenes[clave(celda.dataset.linea)];
+  return typeof v === 'number' ? v : 100;
+}
+function fijarVolumen(celda, v, avisar) {
+  const k = clave(celda.dataset.linea);
+  if (!k) return;
+  v = Math.min(100, Math.max(VOLUMEN_MIN, Math.round(v / 5) * 5));
+  if (v === 100) delete config.volumenes[k]; else config.volumenes[k] = v;
+  guardar();
+  // Si está sonando (y no en pleno fundido), se aplica al tiro
+  if (celda.dataset.mute === '0' && !celda._rampa) {
+    comandoYT(celda.querySelector('iframe'), 'setVolume', [v]);
+    celda._vol = v;
+  }
+  const barra = celda.querySelector('.volumen');
+  if (barra) {
+    barra.value = v;
+    barra.title = 'Volumen de este video: ' + v + '% (se recuerda) · también con las teclas + y −';
+  }
+  if (avisar) mostrarMensaje('🔊 Volumen de este video: ' + v + '%');
+}
+// Teclas + y −: ajustan el volumen del que está sonando
+function cambiarVolumenActual(paso) {
+  const c = celdas.find(x => x.dataset.mute === '0');
+  if (!c) { mostrarMensaje('No hay ningún video sonando'); return; }
+  fijarVolumen(c, volumenDe(c) + paso, true);
 }
 
 // ---------- Modo solo audio (global) ----------

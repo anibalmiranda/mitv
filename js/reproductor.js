@@ -35,7 +35,7 @@ window.addEventListener('message', e => {
     celda._listo = true;
     if (celda.dataset.mute === '0') {
       comandoYT(ifr, 'unMute');
-      comandoYT(ifr, 'setVolume', [celda._vol == null ? 100 : celda._vol]);
+      comandoYT(ifr, 'setVolume', [celda._vol == null ? volumenDe(celda) : celda._vol]);
       comandoYT(ifr, 'playVideo');
     }
     if (celda.classList.contains('max')) pedirMaxCalidad(celda);

@@ -8,7 +8,10 @@
 #   /api/datos (GET / POST)   → copia en archivo de tus listas, favoritos y ajustes (ver CARPETA_DATOS)
 # Solo usa la biblioteca estándar de Python (no hay que instalar nada) y solo escucha en este equipo.
 #
-# Uso: python servidor.py [puerto]   (por defecto 90, el mismo de siempre: así se conservan tus datos)
+# Uso: python servidor.py [puerto]   (por defecto 18090)
+# El puerto 90 de antes lo ocupa IIS (el servidor web de Windows): la página abierta ahí no llegaba a este
+# servidor. Por eso este usa otro puerto, y la página vieja de localhost:90 le entrega tus datos una vez
+# ("mudanza", ver sincronizar.js) y te lleva a la dirección nueva.
 
 import html
 import json
@@ -32,6 +35,9 @@ ARCHIVO_DATOS = os.path.join(CARPETA_DATOS, 'datos.json')
 CARPETA_RESPALDOS = os.path.join(CARPETA_DATOS, 'respaldos')
 RESPALDOS_A_GUARDAR = 14          # un respaldo por día, los últimos 14 días
 MAX_DATOS = 20 * 1024 * 1024      # tope de tamaño para lo que manda la página
+PUERTO_POR_DEFECTO = 18090
+# Únicas páginas de otra dirección que pueden leer y escribir tus datos: la de antes (para la mudanza)
+ORIGENES_MUDANZA = ('http://localhost:90', 'http://127.0.0.1:90')
 
 # Se hace pasar por un navegador común; las cookies evitan la página de "Antes de ir a YouTube" (consentimiento)
 CABECERAS_YT = {
@@ -175,7 +181,7 @@ def guardar_datos(datos):
 
 # ---------- Servidor ----------
 class Manejador(SimpleHTTPRequestHandler):
-    puerto = 90
+    puerto = PUERTO_POR_DEFECTO
     # Algunos Windows registran .js como text/plain: se fuerza el tipo correcto
     extensions_map = dict(SimpleHTTPRequestHandler.extensions_map, **{
         '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json'})
@@ -199,9 +205,28 @@ class Manejador(SimpleHTTPRequestHandler):
     # del servidor (el navegador lo bloquea), así que no puede pisar tus datos.
     def escritura_valida(self):
         origen = self.headers.get('Origin')
-        if origen and origen.lower() not in ('http://127.0.0.1:%d' % self.puerto, 'http://localhost:%d' % self.puerto):
+        propios = ('http://127.0.0.1:%d' % self.puerto, 'http://localhost:%d' % self.puerto)
+        if origen and origen.lower() not in propios + ORIGENES_MUDANZA:
             return False
         return self.host_valido() and self.headers.get('X-MultiYouTube') == '1'
+
+    def origen_mudanza(self):
+        o = (self.headers.get('Origin') or '').lower()
+        return o if o in ORIGENES_MUDANZA else None
+
+    # Permiso previo que pide el navegador antes de que la página de localhost:90 mande tus datos
+    def do_OPTIONS(self):
+        o = self.origen_mudanza()
+        if not o or not self.host_valido() or urllib.parse.urlsplit(self.path).path != '/api/datos':
+            self.send_response(403)
+            self.end_headers()
+            return
+        self.send_response(204)
+        self.send_header('Access-Control-Allow-Origin', o)
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, X-MultiYouTube')
+        self.send_header('Vary', 'Origin')
+        self.end_headers()
 
     def do_GET(self):
         url = urllib.parse.urlsplit(self.path)
@@ -263,6 +288,10 @@ class Manejador(SimpleHTTPRequestHandler):
     def responder(self, codigo, datos):
         cuerpo = json.dumps(datos, ensure_ascii=False).encode('utf-8')
         self.send_response(codigo)
+        ruta = urllib.parse.urlsplit(self.path).path
+        if self.origen_mudanza() and ruta in ('/api/estado', '/api/datos'):
+            self.send_header('Access-Control-Allow-Origin', self.origen_mudanza())
+            self.send_header('Vary', 'Origin')
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Cache-Control', 'no-store')
         self.send_header('Content-Length', str(len(cuerpo)))
@@ -278,7 +307,7 @@ class Manejador(SimpleHTTPRequestHandler):
 
 
 def main():
-    puerto = int(sys.argv[1]) if len(sys.argv) > 1 else 90
+    puerto = int(sys.argv[1]) if len(sys.argv) > 1 else PUERTO_POR_DEFECTO
     Manejador.puerto = puerto
     servidor = ThreadingHTTPServer(('127.0.0.1', puerto), Manejador)
     print('  Sirviendo ' + CARPETA)

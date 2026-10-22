@@ -8,7 +8,7 @@
 <!-- Abre de antemano las conexiones con YouTube y sus miniaturas (la grilla carga más rápido) -->
 <link rel="preconnect" href="https://www.youtube.com">
 <link rel="preconnect" href="https://i.ytimg.com">
-<link rel="stylesheet" href="css/estilos.css?v=20261022d">
+<link rel="stylesheet" href="css/estilos.css?v=20261022f">
 </head>
 <body>
 
@@ -132,6 +132,9 @@
       <label title="En pantalla completa y con el visualizador encendido, pasa sola a la pantalla negra tras estos minutos sin actividad (0 = apagado)">Protector de pantalla
         <input type="number" id="numProtector" min="0" max="120" step="1" value="5"
           style="width:56px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"> min</label>
+      <label title="Modo liviano: solo esta cantidad de videos queda en movimiento (siempre cuentan el que tiene el audio y el ampliado); el resto muestra su miniatura y despierta al dejar el mouse encima (0 = todos en movimiento)">Máx. videos en movimiento
+        <input type="number" id="numMaxActivos" min="0" max="50" step="1" value="0"
+          style="width:56px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"></label>
       <label title="Al cambiar de video ampliado (flechas o tira), el nuevo aparece de a poco sobre el actual (0 = cambio inmediato)">Fundido de imagen
         <input type="number" id="numFadeImg" min="0" max="10" step="0.5" value="1.5"
           style="width:56px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"> s</label>
@@ -164,20 +167,20 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261022d"></script>
-<script src="js/urls.js?v=20261022d"></script>
-<script src="js/grilla.js?v=20261022d"></script>
-<script src="js/favoritos.js?v=20261022d"></script>
-<script src="js/reproductor.js?v=20261022d"></script>
-<script src="js/audio.js?v=20261022d"></script>
-<script src="js/visualizador.js?v=20261022d"></script>
-<script src="js/pantalla.js?v=20261022d"></script>
-<script src="js/panel.js?v=20261022d"></script>
-<script src="js/respaldo.js?v=20261022d"></script>
-<script src="js/camaras.js?v=20261022d"></script>
-<script src="js/buscar.js?v=20261022d"></script>
-<script src="js/directos.js?v=20261022d"></script>
-<script src="js/sincronizar.js?v=20261022d"></script>
-<script src="js/main.js?v=20261022d"></script>
+<script src="js/config.js?v=20261022f"></script>
+<script src="js/urls.js?v=20261022f"></script>
+<script src="js/grilla.js?v=20261022f"></script>
+<script src="js/favoritos.js?v=20261022f"></script>
+<script src="js/reproductor.js?v=20261022f"></script>
+<script src="js/audio.js?v=20261022f"></script>
+<script src="js/visualizador.js?v=20261022f"></script>
+<script src="js/pantalla.js?v=20261022f"></script>
+<script src="js/panel.js?v=20261022f"></script>
+<script src="js/respaldo.js?v=20261022f"></script>
+<script src="js/camaras.js?v=20261022f"></script>
+<script src="js/buscar.js?v=20261022f"></script>
+<script src="js/directos.js?v=20261022f"></script>
+<script src="js/sincronizar.js?v=20261022f"></script>
+<script src="js/main.js?v=20261022f"></script>
 </body>
 </html>

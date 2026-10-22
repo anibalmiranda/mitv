@@ -142,6 +142,25 @@ function render() {
       ico.className = 'icono-audio';
       celda.appendChild(ico);
 
+      // Volumen propio de este video (se recuerda): para emparejar canales que suenan más fuerte o más bajo
+      if (!esCamara) {
+        const vol = document.createElement('input');
+        vol.type = 'range';
+        vol.className = 'volumen';
+        vol.min = VOLUMEN_MIN; vol.max = 100; vol.step = 5;
+        vol.value = volumenDe(celda);
+        vol.title = 'Volumen de este video: ' + vol.value + '% (se recuerda) · también con las teclas + y −';
+        vol.addEventListener('input', () => fijarVolumen(celda, Number(vol.value)));
+        // Que mover la barra no cuente como clic (audio), doble clic (ampliar) ni arrastre del cuadro
+        vol.addEventListener('pointerdown', e => { e.stopPropagation(); celda._enVolumen = true; });
+        vol.addEventListener('pointerup', () => { celda._enVolumen = false; });
+        ['click', 'dblclick'].forEach(ev => vol.addEventListener(ev, e => e.stopPropagation()));
+        celda.appendChild(vol);
+      }
+      // Modo liviano: un cuadro dormido despierta al dejar el mouse encima un momento
+      celda.addEventListener('mouseenter', () => despertarPorMouse(celda, true));
+      celda.addEventListener('mouseleave', () => despertarPorMouse(celda, false));
+
       const vivo = document.createElement('span');
       vivo.className = 'etq-vivo';
       vivo.textContent = 'EN VIVO';
@@ -185,7 +204,7 @@ function render() {
     celdas.push(celda);
     contenedor.appendChild(celda);
   });
-  encolarCarga();
+  actualizarCarga();
   aplicarModoAudio(false);
   pintarFavsBoton();
   if (pendiente) prepararRetomar(pendiente, ult);
@@ -193,21 +212,45 @@ function render() {
   resolverRutasPendientes();   // @handle que aún no se sabe a qué canal corresponden
 }
 
-// ---------- Carga escalonada ----------
+// ---------- Carga escalonada y modo liviano ----------
 // Cada cuadro es un reproductor de YouTube completo: cargarlos todos a la vez traba el PC. Se cargan de a
 // TANDA_CARGA cada INTERVALO_CARGA ms: primero el que tiene (o va a recibir) el audio, después el resto en orden.
 // Mientras esperan se ve su miniatura. Si le das el audio a uno o lo amplías, se carga al tiro (cargarYa).
+// Modo liviano (config.maxActivos > 0, en el ⚙): solo esa cantidad de reproductores queda en movimiento. Siempre
+// cuentan el que tiene el audio y el ampliado; el resto se llena en el orden de la lista. Los demás "duermen":
+// se descarga su reproductor y se ve su miniatura (en los directos, una que YouTube actualiza cada pocos minutos).
+// Un cuadro dormido despierta al dejar el mouse encima medio segundo, y vuelve a dormir 15 s después de salir.
 const TANDA_CARGA = 2;
 const INTERVALO_CARGA = 600;
+const ESPERA_DESPERTAR_MS = 500;
+const ESPERA_DORMIR_MS = 15000;
 let colaCarga = [];
 let timerCarga = null;
-function encolarCarga() {
-  clearTimeout(timerCarga);
-  const pendientes = celdas.filter(c => { const f = c.querySelector('iframe'); return f && f.dataset.src; });
+
+function celdasActivas() {
+  const videos = celdas.filter(c => c.querySelector('iframe'));
+  const limite = Number(config.maxActivos) || 0;
+  if (!limite || videos.length <= limite) return new Set(videos);
+  const activas = new Set(videos.filter(c => c.dataset.mute === '0' || c.dataset.pendiente ||
+                                              c.classList.contains('max') || c._despierta));
+  for (const c of videos) { if (activas.size >= limite) break; activas.add(c); }
+  return activas;
+}
+function actualizarCarga() {
+  const activas = celdasActivas();
+  celdas.forEach(c => { if (c.querySelector('iframe') && !activas.has(c)) dormirCelda(c); });
+  const pendientes = celdas.filter(c => { const f = c.querySelector('iframe'); return f && f.dataset.src && activas.has(c); });
   const prioridad = c => (c.dataset.pendiente || c.dataset.mute === '0') ? 0 : 1;
   colaCarga = pendientes.sort((a, b) => prioridad(a) - prioridad(b));   // sort estable: el resto queda en orden
-  cargarTanda();
+  // Si ya venía cargando, se respeta el ritmo; si no, la primera tanda parte al tiro
+  const enCurso = !!timerCarga;
+  clearTimeout(timerCarga);
+  timerCarga = null;
+  if (enCurso) timerCarga = setTimeout(cargarTanda, INTERVALO_CARGA);
+  else cargarTanda();
 }
+let timerActualizar = null;
+function programarCarga() { clearTimeout(timerActualizar); timerActualizar = setTimeout(actualizarCarga, 200); }
 function cargarTanda() {
   timerCarga = null;
   colaCarga = colaCarga.filter(c => c.isConnected);
@@ -219,13 +262,62 @@ function cargarIframe(celda) {
   if (!ifr || !ifr.dataset.src) return;
   ifr.src = ifr.dataset.src;
   delete ifr.dataset.src;
-  celda.classList.remove('esperando');
+  celda.classList.remove('esperando', 'dormida');
   celda.style.backgroundImage = '';
 }
 function cargarYa(celda) {
   if (!celda) return;
   colaCarga = colaCarga.filter(c => c !== celda);
   cargarIframe(celda);
+  if (Number(config.maxActivos) > 0) programarCarga();   // otro se duerme si se pasó del máximo
+}
+
+// Lo que el cuadro sabía de su reproductor deja de valer cuando este se descarga o se reemplaza
+function olvidarReproductor(celda) {
+  ['_listo', '_videoActual', '_dur', '_durVista', '_durNueva', '_durNuevaVista', '_durAprendida', '_vivoSeguro',
+   '_durPrev', '_durIgual', '_estado', '_estadoPrevio', '_canalPedido', '_directoRevisado', '_listaHecha',
+   '_esperaVideo', '_playlist', '_playlistIndex'].forEach(k => { celda[k] = null; });
+  celda._saltoHecho = false;
+}
+// Dirección para volver a cargar el cuadro: parte en un punto al azar si ya se sabe la duración
+function urlRecarga(celda) {
+  const item = parsear(celda.dataset.linea);
+  const muteado = celda.dataset.mute === '1';
+  if (item.tipo === 'video' && config.inicioAleatorio && !item.inicio) {
+    const mem = config.duraciones[item.id];
+    if (mem && !mem.vivo) { item.inicioAzar = segundoAleatorio(mem.d); celda._saltoHecho = true; celda._dur = mem.d; }
+  }
+  if (item.tipo === 'canal' || celda.classList.contains('en-vivo')) celda._saltoHecho = true;
+  return urlEmbed(item, muteado, !(config.modoAudio && muteado));
+}
+function ponerMiniatura(celda) {
+  let thumb = celda.dataset.thumb;
+  // En los directos, la miniatura "_live" muestra un cuadro reciente de la transmisión (se pide de nuevo cada 5 min)
+  if (thumb && celda.classList.contains('en-vivo'))
+    thumb = thumb.replace('/mqdefault.jpg', '/mqdefault_live.jpg') + '?t=' + Math.floor(Date.now() / 300000);
+  celda.style.backgroundImage = thumb ? 'url("' + thumb + '")' : '';
+}
+function dormirCelda(celda) {
+  const ifr = celda.querySelector('iframe');
+  if (!ifr) return;
+  if (!ifr.dataset.src) {   // estaba cargado: se descarga
+    detenerRampa(celda);
+    olvidarReproductor(celda);
+    ifr.dataset.src = urlRecarga(celda);
+    ifr.src = 'about:blank';
+  }
+  celda.classList.add('esperando', 'dormida');
+  ponerMiniatura(celda);
+}
+function despertarPorMouse(celda, entra) {
+  clearTimeout(celda._timerDespertar);
+  if (!(Number(config.maxActivos) > 0)) return;
+  if (entra) {
+    if (!celda.classList.contains('dormida')) return;
+    celda._timerDespertar = setTimeout(() => { celda._despierta = true; cargarYa(celda); }, ESPERA_DESPERTAR_MS);
+  } else if (celda._despierta) {
+    celda._timerDespertar = setTimeout(() => { celda._despierta = false; programarCarga(); }, ESPERA_DORMIR_MS);
+  }
 }
 
 // Reescribe la lista que se está viendo según el orden visual de las celdas
@@ -244,7 +336,7 @@ function limpiarMarcas(celda) { celda.classList.remove('sobre', 'ins-antes', 'in
 function habilitarArrastre(celda) {
   celda.draggable = true;
   celda.addEventListener('dragstart', e => {
-    if (celda.classList.contains('max')) { e.preventDefault(); return; }
+    if (celda.classList.contains('max') || celda._enVolumen) { e.preventDefault(); return; }
     arrastrada = celda;
     e.dataTransfer.effectAllowed = 'move';
     try { e.dataTransfer.setData('text/plain', ''); } catch (err) { }

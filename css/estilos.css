@@ -397,3 +397,16 @@ body.arrastrando .celda img.camara { pointer-events: none; }
   content: 'Cargando…'; position: absolute; left: 8px; bottom: 8px; z-index: 1;
   background: rgba(0,0,0,.65); color: var(--suave); font-size: 11px; padding: 2px 7px; border-radius: 4px;
 }
+
+/* Volumen propio de cada video (aparece al pasar el mouse) */
+.celda .volumen {
+  position: absolute; left: 8px; bottom: 58px; z-index: 4; width: 110px;
+  opacity: 0; transition: opacity .15s; accent-color: var(--acento); cursor: pointer;
+}
+.celda:hover .volumen { opacity: 1; }
+body.pantalla-completa:not(.mouse-activo) .celda .volumen { opacity: 0; }
+body.modo-audio .celda .volumen { bottom: auto; top: 50%; transform: translateY(-50%); left: auto; right: 170px; }
+.celda.esperando .volumen { display: none; }
+
+/* Modo liviano: cuadro dormido (muestra su miniatura hasta que se despierta) */
+.celda.dormida::after { content: '💤 en pausa · deja el mouse encima para verlo'; }

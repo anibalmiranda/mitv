@@ -53,6 +53,7 @@ function abrirPanel() {
   $('numFadeImg').value = config.fadeImg;
   $('numCarrusel').value = config.carruselSeg;
   $('numProtector').value = config.protectorMin;
+  $('numMaxActivos').value = config.maxActivos || 0;
   llenarSelectorEntrada();
   aviso.textContent = '';
   aviso.classList.remove('ok');
@@ -145,6 +146,7 @@ function guardarPanel() {
   config.fadeImg = Math.min(10, Math.max(0, parseFloat($('numFadeImg').value) || 0));
   config.carruselSeg = Math.min(600, Math.max(5, parseInt($('numCarrusel').value, 10) || 30));
   config.protectorMin = Math.min(120, Math.max(0, parseInt($('numProtector').value, 10) || 0));
+  config.maxActivos = Math.min(50, Math.max(0, parseInt($('numMaxActivos').value, 10) || 0));
   // Entrada del visualizador: si cambió y está encendido, se reinicia con la nueva
   const nuevaEntrada = $('selEntrada').value;
   const cambioEntrada = nuevaEntrada !== (config.visualEntrada || '') && !(nuevaEntrada === '' && !config.visualEntrada);
@@ -153,9 +155,9 @@ function guardarPanel() {
     if (visual) { detenerVisual(false); iniciarVisual(false); }
   }
   guardar();
-  // Si solo cambiaron ajustes que se leen al vuelo (fundidos, carrusel, protector...), los videos siguen sin recargarse
+  // Si solo cambiaron ajustes que se leen al vuelo (fundidos, carrusel, protector, modo liviano...), los videos siguen sin recargarse
   if (huellaRender() !== huellaAntes) render();
-  else { programarPausaOcultos(); reiniciarCarrusel(); pintarCarrusel(); }
+  else { programarPausaOcultos(); reiniciarCarrusel(); pintarCarrusel(); actualizarCarga(); }
   pintarSelector();
 
   const malas = lineas.map(parsear).filter(x => x && x.tipo === 'error' && !x.pendiente);   // @handle en búsqueda no cuentan

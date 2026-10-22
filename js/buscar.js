@@ -125,7 +125,7 @@ function buscarEnYouTube() {
 }
 
 // Cambia la línea vieja por la nueva en TODAS las listas y en favoritos (mismo video = misma clave).
-// El "último seleccionado" que apuntaba al viejo pasa al nuevo. Devuelve cuántos lugares cambió (no guarda).
+// El "último seleccionado" y el volumen ajustado pasan al nuevo. Devuelve cuántos lugares cambió (no guarda).
 function reemplazarEnConfig(vieja, nueva) {
   const kVieja = clave(vieja);
   let cambios = 0;
@@ -136,6 +136,9 @@ function reemplazarEnConfig(vieja, nueva) {
   Object.keys(config.listas).forEach(n => { config.listas[n] = cambiar(config.listas[n]); });
   config.favoritos = cambiar(config.favoritos);
   Object.values(config.ultimos).forEach(u => { if (u && u.clave === kVieja) u.clave = clave(nueva); });
+  const kNueva = clave(nueva);
+  if (kVieja && kNueva && config.volumenes[kVieja] != null && config.volumenes[kNueva] == null)
+    config.volumenes[kNueva] = config.volumenes[kVieja];   // el volumen ajustado sigue con la URL nueva
   return cambios;
 }
 

@@ -39,6 +39,8 @@ let config = {
   protectorMin: 5,       // minutos sin actividad para el protector de pantalla (0 = apagado)
   nombres: {},           // memoria de nombres { claveLinea: { titulo, autor, vivo, canal, directo, t } } para buscar parecidos
   handles: {},           // @handle (o c/nombre, user/nombre) → ID del canal (UC…), averiguado por servidor.py
+  volumenes: {},         // volumen propio de cada video { claveLinea: 5..100 } (los que no están van a 100)
+  maxActivos: 0,         // modo liviano: máximo de videos en movimiento (0 = todos)
   guardado: 0            // cuándo se guardó por última vez: decide qué copia es la más nueva (navegador o archivo)
 };
 const CONFIG_INICIAL = JSON.parse(JSON.stringify(config));   // valores por defecto, para datos que lleguen incompletos
@@ -47,11 +49,13 @@ const MAX_NOMBRES = 800;
 let celdas = [];        // celdas en el orden visual
 let comentarios = [];   // líneas '#' de la lista actual (se conservan al reordenar)
 let creandoLista = false;
+let datosLocalesAlCargar = false;   // el navegador ya tenía datos guardados al abrir la página
 
 // ---------- Persistencia ----------
 function cargar() {
   try {
     const raw = localStorage.getItem(CLAVE);
+    datosLocalesAlCargar = !!raw;
     if (raw) {
       const c = JSON.parse(raw);
       // Migración desde la versión con una sola lista
@@ -71,6 +75,7 @@ function normalizarConfig() {
   if (!config.duraciones || typeof config.duraciones !== 'object') config.duraciones = {};
   if (!config.nombres || typeof config.nombres !== 'object') config.nombres = {};
   if (!config.handles || typeof config.handles !== 'object') config.handles = {};
+  if (!config.volumenes || typeof config.volumenes !== 'object') config.volumenes = {};
 }
 
 // ---------- Nombres memorizados ----------
