@@ -8,13 +8,13 @@
 <!-- Abre de antemano las conexiones con YouTube y sus miniaturas (la grilla carga más rápido) -->
 <link rel="preconnect" href="https://www.youtube.com">
 <link rel="preconnect" href="https://i.ytimg.com">
-<link rel="stylesheet" href="css/estilos.css?v=20261022k">
+<link rel="stylesheet" href="css/estilos.css?v=20261022l">
 </head>
 <body>
 
 <div id="barra-sup">
   <select id="selLista" title="Lista activa"></select>
-  <button id="btnMuteGeneral" title="Silenciar todo">
+  <button id="btnMuteGeneral" title="Silenciar todo (M)">
     <svg id="icoSonido" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M11 5L6 9H2v6h4l5 4z" fill="currentColor"></path>
       <path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M19 5a10 10 0 0 1 0 14"></path>
@@ -27,13 +27,13 @@
   <button id="btnFavs" title="Ver favoritos">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z"></path></svg>
   </button>
-  <button id="btnCarrusel" title="Carrusel: recorre los videos de la lista">
+  <button id="btnCarrusel" title="Carrusel: recorre los videos de la lista (C)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 12a9 9 0 0 1-15.5 6.2"></path><path d="M3 12a9 9 0 0 1 15.5-6.2"></path>
       <path d="M18.5 2v4h-4"></path><path d="M5.5 22v-4h4"></path>
     </svg>
   </button>
-  <button id="btnPantalla" title="Pantalla completa">
+  <button id="btnPantalla" title="Pantalla completa (F)">
     <svg id="icoExpandir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"></path>
     </svg>
@@ -99,7 +99,7 @@
       <button class="btn secundario" id="btnNueva">+ Nueva lista</button>
       <button class="btn peligro" id="btnEliminar">Eliminar lista</button>
     </div>
-    <p id="ayudaPanel">Una URL por línea: <code>watch?v=</code>, <code>youtu.be/</code>, <code>/live/</code>, <code>/shorts/</code>, <code>/embed/</code> , canales en vivo <code>youtube.com/channel/UC…</code> o por su <code>@nombre</code> (<code>youtube.com/@nombre</code>; necesita abrir con iniciar.bat), cámaras IP (<code>http://IP:puerto/mjpg/video.mjpg</code>, sin audio) y playlists (<code>playlist?list=</code> o <code>watch?v=…&amp;list=…</code>; con "Inicio aleatorio" parten en un video al azar y siguen mezcladas). Clic sobre un video le da el audio (uno a la vez). Doble clic amplía / vuelve a miniatura. Arrastra un cuadro y suéltalo sobre otro: queda justo antes de ese. ☆ marca favorito (máx. 9). Las líneas que empiezan con <code>#</code> se ignoran.</p>
+    <p id="ayudaPanel">Una URL por línea: <code>watch?v=</code>, <code>youtu.be/</code>, <code>/live/</code>, <code>/shorts/</code>, <code>/embed/</code> , canales en vivo <code>youtube.com/channel/UC…</code> o por su <code>@nombre</code> (<code>youtube.com/@nombre</code>; necesita abrir con iniciar.bat), cámaras IP (<code>http://IP:puerto/mjpg/video.mjpg</code>, sin audio) y playlists (<code>playlist?list=</code> o <code>watch?v=…&amp;list=…</code>; con "Inicio aleatorio" parten en un video al azar y siguen mezcladas). Clic sobre un video le da el audio (uno a la vez). Doble clic amplía / vuelve a miniatura. Arrastra un cuadro y suéltalo sobre otro: queda justo antes de ese. ☆ marca favorito (máx. 9). Las líneas que empiezan con <code>#</code> se ignoran.<br><b>Atajos:</b> <code>M</code> silenciar todo · <code>F</code> pantalla completa · <code>C</code> carrusel · <code>1</code>–<code>9</code> ir a ese video · <code>+</code> / <code>−</code> volumen del que suena · flechas: anterior / siguiente y tira (en pantalla completa) · <code>Esc</code> volver a la grilla · teclas multimedia ⏯ ⏭ ⏮ ⏹.</p>
     <textarea id="urls" spellcheck="false" placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX&#10;https://youtu.be/XXXXXXXXXXX&#10;https://www.youtube.com/channel/UCxxxxxxxxxxxxxxxxxxxxxx&#10;@NombreDelCanal&#10;http://192.168.1.50:8080/mjpg/video.mjpg"></textarea>
     <div class="fila">
       <label title="De dónde lee el sonido el visualizador. 'Mezcla estéreo' entrega lo que suena en el PC.">Entrada del visualizador
@@ -170,25 +170,25 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261022k"></script>
-<script src="js/urls.js?v=20261022k"></script>
-<script src="js/grilla.js?v=20261022k"></script>
-<script src="js/favoritos.js?v=20261022k"></script>
-<script src="js/reproductor.js?v=20261022k"></script>
-<script src="js/audio.js?v=20261022k"></script>
-<script src="js/visualizador.js?v=20261022k"></script>
-<script src="js/pantalla.js?v=20261022k"></script>
-<script src="js/navegacion.js?v=20261022k"></script>
-<script src="js/carrusel.js?v=20261022k"></script>
-<script src="js/ampliar.js?v=20261022k"></script>
-<script src="js/pausa.js?v=20261022k"></script>
-<script src="js/panel.js?v=20261022k"></script>
-<script src="js/respaldo.js?v=20261022k"></script>
-<script src="js/camaras.js?v=20261022k"></script>
-<script src="js/buscar.js?v=20261022k"></script>
-<script src="js/directos.js?v=20261022k"></script>
-<script src="js/sincronizar.js?v=20261022k"></script>
-<script src="js/teclas.js?v=20261022k"></script>
-<script src="js/main.js?v=20261022k"></script>
+<script src="js/config.js?v=20261022l"></script>
+<script src="js/urls.js?v=20261022l"></script>
+<script src="js/grilla.js?v=20261022l"></script>
+<script src="js/favoritos.js?v=20261022l"></script>
+<script src="js/reproductor.js?v=20261022l"></script>
+<script src="js/audio.js?v=20261022l"></script>
+<script src="js/visualizador.js?v=20261022l"></script>
+<script src="js/pantalla.js?v=20261022l"></script>
+<script src="js/navegacion.js?v=20261022l"></script>
+<script src="js/carrusel.js?v=20261022l"></script>
+<script src="js/ampliar.js?v=20261022l"></script>
+<script src="js/pausa.js?v=20261022l"></script>
+<script src="js/panel.js?v=20261022l"></script>
+<script src="js/respaldo.js?v=20261022l"></script>
+<script src="js/camaras.js?v=20261022l"></script>
+<script src="js/buscar.js?v=20261022l"></script>
+<script src="js/directos.js?v=20261022l"></script>
+<script src="js/sincronizar.js?v=20261022l"></script>
+<script src="js/teclas.js?v=20261022l"></script>
+<script src="js/main.js?v=20261022l"></script>
 </body>
 </html>

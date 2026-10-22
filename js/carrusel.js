@@ -9,7 +9,7 @@ let carrusel = null;   // { timer, previo, vista }
 function pintarCarrusel() {
   const on = !!carrusel;
   $('btnCarrusel').classList.toggle('activo', on);
-  $('btnCarrusel').title = on ? 'Detener carrusel' : 'Carrusel: recorre los videos de la lista "' + config.actual + '" (cada ' + config.carruselSeg + ' s)';
+  $('btnCarrusel').title = (on ? 'Detener carrusel' : 'Carrusel: recorre los videos de la lista "' + config.actual + '" (cada ' + config.carruselSeg + ' s)') + ' (C)';
   document.body.classList.toggle('carrusel-activo', on);
 }
 function animarBarraCarrusel(ms) {

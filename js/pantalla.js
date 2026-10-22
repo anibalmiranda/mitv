@@ -6,7 +6,7 @@
 function pintarPantalla() {
   const fs = !!document.fullscreenElement;
   btnPantalla.classList.toggle('activo', fs);
-  btnPantalla.title = fs ? 'Salir de pantalla completa' : 'Pantalla completa';
+  btnPantalla.title = (fs ? 'Salir de pantalla completa' : 'Pantalla completa') + ' (F)';
   $('icoExpandir').style.display = fs ? 'none' : '';
   $('icoContraer').style.display = fs ? '' : 'none';
 }

@@ -18,10 +18,20 @@ document.addEventListener('keydown', e => {
     else restaurarTodo();
   }
   if (e.key === 'Enter' && e.ctrlKey && panelAbierto) guardarPanel();
-  // + y − ajustan el volumen del video que suena (se recuerda para ese video)
-  if (!panelAbierto && !buscarAbierto && !enCampo && !e.ctrlKey && !e.altKey) {
-    if (e.key === '+' || e.key === '=') { e.preventDefault(); cambiarVolumenActual(5); }
-    if (e.key === '-') { e.preventDefault(); cambiarVolumenActual(-5); }
+  // Atajos de una tecla (no mientras escribes en un campo ni con una ventana abierta):
+  //  + / − volumen del que suena · M silenciar todo · F pantalla completa · C carrusel · 1 a 9 ir a ese video
+  if (!panelAbierto && !buscarAbierto && !enCampo && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    const k = e.key.toLowerCase();
+    if (k === '+' || k === '=') { e.preventDefault(); cambiarVolumenActual(5); }
+    if (k === '-') { e.preventDefault(); cambiarVolumenActual(-5); }
+    if (k === 'm') { e.preventDefault(); btnMuteGeneral.click(); }
+    if (k === 'f') { e.preventDefault(); btnPantalla.click(); }
+    if (k === 'c') {
+      e.preventDefault();
+      if (document.fullscreenElement) $('btnCarrusel').click();
+      else mostrarMensaje('El carrusel es para pantalla completa: presiona F');
+    }
+    if (/^[1-9]$/.test(k)) { e.preventDefault(); irANumero(Number(k)); }
   }
   // Las flechas navegan solo si no estás escribiendo en un campo ni hay una ventana abierta
   if (document.fullscreenElement && !panelAbierto && !buscarAbierto && !enCampo) {

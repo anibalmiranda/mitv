@@ -171,7 +171,7 @@ let silencioGeneral = null;   // celda que tenía el audio al silenciar todo
 function pintarMuteGeneral() {
   const on = !!silencioGeneral;
   btnMuteGeneral.classList.toggle('activo', on);
-  btnMuteGeneral.title = on ? 'Volver a activar el sonido' : 'Silenciar todo';
+  btnMuteGeneral.title = (on ? 'Volver a activar el sonido' : 'Silenciar todo') + ' (M)';
   $('icoSonido').style.display = on ? 'none' : '';
   $('icoSilencio').style.display = on ? '' : 'none';
 }

@@ -36,6 +36,22 @@ function navegar(dir, auto) {
   irA(lista[destino]);
   if (document.body.classList.contains('tira-abierta')) armarTira();
 }
+// Teclas 1 a 9: van al video con ese número (el mismo que muestra la tira). En pantalla completa, con un video
+// ampliado o en solo audio, como las flechas; en la grilla, solo le pasan el audio (una cámara se amplía).
+function irANumero(n) {
+  const lista = validas();
+  const c = lista[n - 1];
+  if (!c) { mostrarMensaje('No hay un video ' + n + ' en esta vista'); return; }
+  reiniciarCarrusel();
+  if (document.fullscreenElement || contenedor.querySelector('.celda.max') || config.modoAudio) irA(c);
+  else if (c.dataset.tipo === 'camara') alternarMax(c);
+  else {
+    if (c.dataset.mute === '1') alternarAudio(c);
+    const tit = c.querySelector('.titulo');
+    mostrarMensaje(n + ' / ' + lista.length + (tit ? ' · ' + tit.textContent : ''));
+  }
+  if (document.body.classList.contains('tira-abierta')) armarTira();
+}
 $('navPrev').addEventListener('click', () => navegar(-1));
 $('navNext').addEventListener('click', () => navegar(1));
 
