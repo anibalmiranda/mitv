@@ -514,7 +514,8 @@ body.solo-visual #cuentaAtras { display: none; }
   font-variant-numeric: tabular-nums; transition: color 0.4s ease;
 }
 #cuentaAtras .half.bottom span { transform: translateY(-50%); }
-#cuentaAtras .flip.overtime .half span { color: #ff5a5a; }
+#cuentaAtras .flip.overtime .half span { color: #ff5a5a; }   /* llegó a cero: rojo */
+#cuentaAtras .flip.almuerzo .half span { color: #ffd23c; }   /* entre 13:00 y 14:00: amarillo */
 /* paletas que giran al cambiar el número */
 #cuentaAtras .half.leaf { z-index: 3; }
 #cuentaAtras .half.top.leaf { animation: caFlipTop 0.3s ease-in forwards; }

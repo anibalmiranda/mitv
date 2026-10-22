@@ -67,6 +67,9 @@ function tickCuenta() {
   ponerPaleta($('caMinutos'), dos(Math.floor((seg % 3600) / 60)));
   ponerPaleta($('caSegundos'), dos(seg % 60));
   cajaCuenta.querySelectorAll('.flip, .time-block').forEach(e => e.classList.toggle('overtime', excedido));
+  // Entre las 13:00 y las 14:00 (hora de almuerzo) los números van en amarillo; si ya llegó a cero, manda el rojo
+  const almuerzo = ahora.getHours() === 13;
+  cajaCuenta.querySelectorAll('.flip').forEach(e => e.classList.toggle('almuerzo', almuerzo && !excedido));
   cajaCuenta.title = excedido ? 'Tiempo excedido desde la hora de salida' : 'Falta para la hora de salida';
   // Se alinea con el cambio de segundo del reloj
   timerCuenta = setTimeout(tickCuenta, 1000 - (Date.now() % 1000) + 5);
