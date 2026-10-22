@@ -35,5 +35,7 @@ pintarSelector();
 pintarPantalla();
 render();
 if (!config.vistaFav && !fuente().length && Object.keys(config.listas).length === 1) abrirPanel();
+// Copia en archivo: si es más nueva que la del navegador (p. ej. se borraron sus datos), se recupera
+sincronizarAlIniciar().then(() => { if (fondo.classList.contains('abierto') && fuente().length) cerrarPanel(); });
 // Si el visualizador quedó encendido, se reactiva solo (el permiso de la entrada ya está dado)
 if (config.visualActivo) iniciarVisual(true);

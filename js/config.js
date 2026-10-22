@@ -38,8 +38,10 @@ let config = {
   visualTipo: 'barras',  // barras | espejo | onda | circular | hud | vintage | tunel | seda
   protectorMin: 5,       // minutos sin actividad para el protector de pantalla (0 = apagado)
   nombres: {},           // memoria de nombres { claveLinea: { titulo, autor, vivo, canal, directo, t } } para buscar parecidos
-  handles: {}            // @handle (o c/nombre, user/nombre) → ID del canal (UC…), averiguado por servidor.py
+  handles: {},           // @handle (o c/nombre, user/nombre) → ID del canal (UC…), averiguado por servidor.py
+  guardado: 0            // cuándo se guardó por última vez: decide qué copia es la más nueva (navegador o archivo)
 };
+const CONFIG_INICIAL = JSON.parse(JSON.stringify(config));   // valores por defecto, para datos que lleguen incompletos
 const MAX_DURACIONES = 800;
 const MAX_NOMBRES = 800;
 let celdas = [];        // celdas en el orden visual
@@ -58,6 +60,10 @@ function cargar() {
       config = Object.assign(config, c);
     }
   } catch (e) { /* sin storage, seguimos en memoria */ }
+  normalizarConfig();
+}
+// Completa o corrige lo que falte o venga dañado (de una versión anterior, de un respaldo, del archivo)
+function normalizarConfig() {
   if (!config.listas || !Object.keys(config.listas).length) config.listas = { 'Principal': [] };
   if (!config.listas[config.actual]) config.actual = Object.keys(config.listas)[0];
   if (!Array.isArray(config.favoritos)) config.favoritos = [];
@@ -112,7 +118,9 @@ function recordarDuracion(id, dur, vivo) {
   guardar();
 }
 function guardar() {
+  config.guardado = Date.now();
   try { localStorage.setItem(CLAVE, JSON.stringify(config)); } catch (e) { }
+  programarSubida();   // y la copia en archivo (sincronizar.js)
 }
 // Lo que se está mostrando: favoritos o la lista elegida
 function fuente() { return config.vistaFav ? config.favoritos : (config.listas[config.actual] || []); }
