@@ -41,6 +41,7 @@ let config = {
   handles: {},           // @handle (o c/nombre, user/nombre) → ID del canal (UC…), averiguado por servidor.py
   volumenes: {},         // volumen propio de cada video { claveLinea: 5..100 } (los que no están van a 100)
   maxActivos: 0,         // modo liviano: máximo de videos en movimiento (0 = todos)
+  ahorroMin: 10,         // minutos sin actividad para dejar solo el video que suena (0 = nunca)
   guardado: 0            // cuándo se guardó por última vez: decide qué copia es la más nueva (navegador o archivo)
 };
 const CONFIG_INICIAL = JSON.parse(JSON.stringify(config));   // valores por defecto, para datos que lleguen incompletos

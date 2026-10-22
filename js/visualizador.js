@@ -579,6 +579,7 @@ function registrarActividad(e) {
     ultimaPos = p;
   }
   ultimaActividad = Date.now();
+  salirAhorro();   // si estaba en ahorro por inactividad, los videos vuelven (grilla.js)
   if (escenaPorProtector && document.body.classList.contains('solo-visual')) {
     salirEscena();
     // Esa tecla o clic solo "despierta": no debe además achicar el video ni cambiar el audio

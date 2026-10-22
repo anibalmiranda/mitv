@@ -229,6 +229,9 @@ let timerCarga = null;
 
 function celdasActivas() {
   const videos = celdas.filter(c => c.querySelector('iframe'));
+  // Ahorro por inactividad: solo el que suena y el que se está viendo ampliado
+  if (enAhorro) return new Set(videos.filter(c => c.dataset.mute === '0' || c.dataset.pendiente ||
+                                                  c.classList.contains('max') || (fundido && fundido.nueva === c)));
   const limite = Number(config.maxActivos) || 0;
   if (!limite || videos.length <= limite) return new Set(videos);
   const activas = new Set(videos.filter(c => c.dataset.mute === '0' || c.dataset.pendiente ||
@@ -319,6 +322,29 @@ function despertarPorMouse(celda, entra) {
     celda._timerDespertar = setTimeout(() => { celda._despierta = false; programarCarga(); }, ESPERA_DORMIR_MS);
   }
 }
+
+// ---------- Ahorro por inactividad ----------
+// Tras config.ahorroMin minutos sin mover el mouse ni tocar el teclado (nadie está mirando), se descargan todos
+// los reproductores menos el que suena y el ampliado, y se cortan las cámaras: cada reproductor de YouTube
+// mantiene varias conexiones abiertas (video, anuncios, estadísticas) y el router lo nota. Con el primer
+// movimiento todo vuelve a cargar (escalonado). No se activa con el carrusel andando (alguien está mirando).
+let enAhorro = false;
+function revisarAhorro() {
+  const min = Number(config.ahorroMin) || 0;
+  if (!min || enAhorro || carrusel || Date.now() - ultimaActividad < min * 60000) return;
+  enAhorro = true;
+  actualizarCarga();
+  ajustarCamaras();
+  mostrarMensaje('💤 Ahorro: sin actividad, solo sigue el video que suena');
+}
+function salirAhorro() {
+  if (!enAhorro) return;
+  enAhorro = false;
+  actualizarCarga();
+  ajustarCamaras();
+  mostrarMensaje('👀 Volviendo a cargar los videos');
+}
+setInterval(revisarAhorro, 15000);
 
 // Reescribe la lista que se está viendo según el orden visual de las celdas
 function sincronizarUrls() {

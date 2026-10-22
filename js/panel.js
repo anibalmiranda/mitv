@@ -54,6 +54,7 @@ function abrirPanel() {
   $('numCarrusel').value = config.carruselSeg;
   $('numProtector').value = config.protectorMin;
   $('numMaxActivos').value = config.maxActivos || 0;
+  $('numAhorro').value = config.ahorroMin || 0;
   llenarSelectorEntrada();
   aviso.textContent = '';
   aviso.classList.remove('ok');
@@ -147,6 +148,8 @@ function guardarPanel() {
   config.carruselSeg = Math.min(600, Math.max(5, parseInt($('numCarrusel').value, 10) || 30));
   config.protectorMin = Math.min(120, Math.max(0, parseInt($('numProtector').value, 10) || 0));
   config.maxActivos = Math.min(50, Math.max(0, parseInt($('numMaxActivos').value, 10) || 0));
+  config.ahorroMin = Math.min(240, Math.max(0, parseInt($('numAhorro').value, 10) || 0));
+  if (!config.ahorroMin) salirAhorro();
   // Entrada del visualizador: si cambió y está encendido, se reinicia con la nueva
   const nuevaEntrada = $('selEntrada').value;
   const cambioEntrada = nuevaEntrada !== (config.visualEntrada || '') && !(nuevaEntrada === '' && !config.visualEntrada);

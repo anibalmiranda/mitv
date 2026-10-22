@@ -17,6 +17,8 @@ function conectarTeclasMultimedia() {
 }
 
 function accionMultimedia(tecla) {
+  ultimaActividad = Date.now();   // también cuenta como actividad (sale del ahorro)
+  salirAhorro();
   if (tecla === 'playpausa') { btnMuteGeneral.click(); return; }
   if (tecla === 'detener') {
     if (!silencioGeneral && celdas.some(c => c.dataset.mute === '0')) btnMuteGeneral.click();

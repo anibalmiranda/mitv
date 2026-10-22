@@ -54,7 +54,9 @@ function modoCamara(celda) {
   return pareceFoto(url) ? 'foto' : 'directo';
 }
 
-function camaraActiva(celda) { return !config.modoAudio && !celda._pausadaFS; }
+function camaraActiva(celda) {
+  return !config.modoAudio && !celda._pausadaFS && !(enAhorro && !celda.classList.contains('max'));
+}
 
 // Conecta, cambia de modo o corta la cámara según si se está viendo
 function ajustarCamara(celda) {
