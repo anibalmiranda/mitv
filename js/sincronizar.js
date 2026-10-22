@@ -104,6 +104,7 @@ async function sincronizarAlIniciar() {
     render();
     pintarSelector();
     pintarPantalla();
+    mostrarSuperFav();
     mostrarMensaje('📂 Datos recuperados del archivo de respaldo');
     return;
   }

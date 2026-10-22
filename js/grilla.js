@@ -84,6 +84,7 @@ function render(reutilizar) {
       const bQuitar = previa.querySelector('.quitar');
       if (bQuitar) bQuitar.title = config.vistaFav ? 'Quitar de favoritos' : 'Quitar';
       pintarFav(previa);
+      pintarSuperFavCelda(previa);
       pintarAudio(previa);
       previa.style.order = celdas.length;
       celdas.push(previa);
@@ -211,6 +212,12 @@ function render(reutilizar) {
       bFav.addEventListener('click', () => alternarFav(celda));
       celda.appendChild(bFav);
 
+      const bSuper = document.createElement('button');
+      bSuper.className = 'superfav';
+      bSuper.textContent = '👑';
+      bSuper.addEventListener('click', () => alternarSuperFav(celda));
+      celda.appendChild(bSuper);
+
       const bMax = document.createElement('button');
       bMax.className = 'maximizar';
       bMax.title = 'Ampliar / miniatura';
@@ -226,6 +233,7 @@ function render(reutilizar) {
       celda.appendChild(bBuscar);
 
       pintarFav(celda);
+      pintarSuperFavCelda(celda);
       pintarAudio(celda);
       if (esExterno) marcarExterno(celda);
       idx++;
