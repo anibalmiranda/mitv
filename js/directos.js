@@ -230,3 +230,75 @@ async function buscarDirectoActual() {
   }
 }
 $('btnBuscarDirecto').addEventListener('click', buscarDirectoActual);
+
+// ---------- Revisión periódica de todos los directos guardados ----------
+// Cada REVISION_PERIODICA_MIN minutos (y poco después de abrir la página) se revisan los directos de TODAS las listas,
+// favoritos, super favorito y audio de fondo, no solo los que están en pantalla. Se reemplaza uno solo si ese
+// video ya no está en vivo y su canal transmite con otra URL (si el canal tiene dos directos a la vez, el que
+// sigue funcionando no se toca). También se puede lanzar a mano desde el panel de estado.
+const REVISION_PERIODICA_MIN = 30;
+const PAUSA_ENTRE_DIRECTOS_MS = 1500;   // para no consultar a YouTube en ráfaga
+let revisionEnCurso = null;              // { hechos, total } mientras corre
+
+function lineasGuardadas() {
+  const todas = [].concat(...Object.values(config.listas), config.favoritos, [config.superFav, config.fondoAudio]);
+  const vistas = new Set(), res = [];
+  todas.forEach(l => { const k = l && clave(l); if (k && !vistas.has(k)) { vistas.add(k); res.push(l); } });
+  return res;
+}
+// ¿Se sabe que esta línea es (o fue) un directo?
+function esDirectoConocido(linea) {
+  const p = parsear(linea);
+  if (!p || p.tipo !== 'video') return false;
+  const mem = config.nombres[clave(linea)] || {};
+  const dur = config.duraciones[p.id];
+  return !!(mem.vivo || mem.directo || p.pistaVivo || (dur && dur.vivo));
+}
+
+// Devuelve { revisados, reemplazados: [nombres] } o null si no hay servidor
+async function revisarDirectosGuardados(alAvanzar) {
+  if (revisionEnCurso || servidorOk !== true) return null;
+  const lineas = lineasGuardadas().filter(esDirectoConocido);
+  revisionEnCurso = { hechos: 0, total: lineas.length };
+  const reemplazados = [];
+  try {
+    for (const linea of lineas) {
+      if (alAvanzar) alAvanzar(revisionEnCurso);
+      const p = parsear(linea), k = clave(linea);
+      let info = null;
+      try { info = await api('video', { id: p.id }); guardarCanal(k, info); }
+      catch (e) { if (e.message === 'sin servidor') break; }
+      revisionEnCurso.hechos++;
+      if (info && (info.vivo || !info.directo)) continue;   // sigue en vivo, o nunca fue un directo
+      const canal = (info && info.canal) || (config.nombres[k] || {}).canal;
+      if (!canal) continue;
+      let d;
+      try { d = await api('directo', { canal }); } catch (e) { continue; }
+      if (d.vivo && d.video && d.video !== p.id && clave(lineasGuardadas().find(l => clave(l) === k) || '') === k) {
+        reemplazarDirectoGuardado(linea, d);
+        reemplazados.push(d.autor || d.titulo || d.video);
+      }
+      await new Promise(r => setTimeout(r, PAUSA_ENTRE_DIRECTOS_MS));
+    }
+  } finally {
+    const total = revisionEnCurso.hechos;
+    revisionEnCurso = null;
+    if (alAvanzar) alAvanzar(null);
+    if (reemplazados.length) mostrarMensaje('📡 ' + reemplazados.length + ' directo(s) actualizado(s): ' + reemplazados.join(', '));
+    return { revisados: total, reemplazados };
+  }
+}
+// Si está en pantalla, se recarga solo ese cuadro; si no, se cambia en las listas
+function reemplazarDirectoGuardado(linea, d) {
+  const celda = celdas.find(c => clave(c.dataset.linea) === clave(linea));
+  if (celda) { cambiarDirecto(celda, d); return; }
+  const nueva = 'https://www.youtube.com/watch?v=' + d.video;
+  config.nombres[clave(nueva)] = Object.assign({}, config.nombres[clave(linea)], {
+    titulo: d.titulo || '', autor: d.autor || '', vivo: true, directo: true, canal: d.canal, t: Date.now()
+  });
+  reemplazarEnConfig(linea, nueva);
+  guardar();
+  pintarSelector();
+}
+setTimeout(() => revisarDirectosGuardados(), 2 * 60000);
+setInterval(() => revisarDirectosGuardados(), REVISION_PERIODICA_MIN * 60000);

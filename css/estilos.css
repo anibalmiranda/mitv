@@ -559,3 +559,48 @@ body.modo-audio .celda .fondo { top: 50%; transform: translateY(-50%); right: 13
 #audioFondo { position: fixed; left: -10000px; top: 0; width: 320px; height: 180px; overflow: hidden; }
 #audioFondo iframe { width: 320px; height: 180px; border: 0; }
 #barra-sup #btnFondo.activo { background: #2cb67d; color: #0a0a0a; }
+
+/* Panel de estado de la lista (estado.js), mismo estilo que "Buscar parecido" */
+#fondoEstado {
+  position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 32;
+  display: none; align-items: center; justify-content: center;
+}
+#fondoEstado.abierto { display: flex; }
+#panelEstado {
+  background: var(--panel); border: 1px solid var(--borde); border-radius: 10px;
+  width: min(980px, 94vw); max-height: 88vh; padding: 18px; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+#panelEstado h2 { font-size: 17px; font-weight: 600; }
+#estadoLectura, #estadoResumen { font-size: 13px; color: #9be7a6; }
+#estadoLectura.malo { color: #ffb347; }
+#estadoResumen { color: var(--suave); }
+#estadoRevision { font-size: 12px; color: #9fd0ff; min-height: 15px; }
+#estadoTabla { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 4px; font-size: 13px; color: var(--suave); }
+.estado-fila {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) minmax(160px, 34%) auto; gap: 10px; align-items: center;
+  padding: 6px 8px; border-radius: 6px; background: #151518; border-left: 3px solid transparent;
+}
+.estado-fila.bien { border-left-color: #2cb67d; }
+.estado-fila.malo { border-left-color: #ff5a5a; background: #1c1416; }
+.estado-fila .n { color: var(--suave); text-align: right; font-variant-numeric: tabular-nums; }
+.estado-fila .nombre { min-width: 0; }
+.estado-fila .nombre b { display: block; color: var(--texto); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.estado-fila .nombre small { display: block; font-size: 11px; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.estado-fila .est { color: var(--texto); }
+.estado-fila.malo .est { color: #ffb4b4; }
+.estado-fila .acc { display: flex; gap: 4px; }
+.estado-fila .acc button {
+  border: 0; border-radius: 5px; padding: 4px 9px; cursor: pointer; font-size: 12px; background: #2a2a2f; color: var(--texto);
+}
+.estado-fila .acc button:hover { background: #3a3a40; }
+
+/* Aviso arriba al centro si la lectura de YouTube falla (estado.js) */
+#avisoSistema {
+  position: fixed; left: 50%; top: 5.2vh; transform: translateX(-50%); z-index: 26;
+  display: none; align-items: center; gap: 10px; max-width: 80vw;
+  background: #3a2a10; border: 1px solid #ffb347; color: #ffd9a0; font-size: 13px; padding: 7px 10px 7px 14px; border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.5);
+}
+#avisoSistema.visible { display: flex; }
+#avisoSistema button { border: 0; background: none; color: #ffd9a0; cursor: pointer; font-size: 14px; }

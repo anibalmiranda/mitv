@@ -8,6 +8,7 @@
 #   /api/datos (GET / POST)   → copia en archivo de tus listas, favoritos y ajustes (ver CARPETA_DATOS)
 #   /api/camara?url=...       → último cuadro de una cámara IP (MJPEG o foto fija), ver "Cámaras IP"
 #   /api/eventos              → conexión abierta por la que llegan las teclas multimedia (solo Windows)
+#   /api/salud[?revisar=1]    → si la lectura de YouTube funciona (ver "Salud de la lectura de YouTube")
 # Solo usa la biblioteca estándar de Python (no hay que instalar nada) y solo escucha en este equipo.
 #
 # Uso: python servidor.py [puerto]   (por defecto 18090)
@@ -124,6 +125,7 @@ def info_canal(ruta):
     m = (re.search(r'<link rel="canonical" href="https://www\.youtube\.com/channel/(UC[\w-]{22})"', pagina) or
          re.search(r'"externalId":"(UC[\w-]{22})"', pagina))
     if not m:
+        vigilar_pagina(pagina)
         return {'error': 'no encontré ese canal'}
     t = re.search(r'<meta property="og:title" content="([^"]*)"', pagina)
     return {'canal': m.group(1), 'nombre': html.unescape(t.group(1)) if t else ''}
@@ -133,6 +135,7 @@ def info_video(vid):
     pagina = bajar('https://www.youtube.com/watch?v=' + vid)
     d = detalles_video(pagina)
     if not d or d['video'] != vid:
+        vigilar_pagina(pagina)
         return {'error': 'el video no existe o no se puede leer'}
     d['directo'] = '"isLiveContent":true' in pagina   # es (o fue) una transmisión en vivo
     d['vivo'] = d['directo'] and en_vivo_ahora(pagina)
@@ -148,6 +151,71 @@ def info_directo(canal):
     d['vivo'] = True
     d['canal'] = d.get('canal') or canal
     return d
+
+
+# ---------- Salud de la lectura de YouTube ----------
+# Este servidor lee las páginas públicas de YouTube (no usa su API oficial): si YouTube cambia su página o pide
+# comprobar que no eres un robot, la lectura deja de funcionar sin avisar. Para notarlo, al arrancar y cada
+# 3 horas lee un video y un canal que siempre existen ("canario"); también mira cada página que lee. La página
+# consulta /api/salud y muestra un aviso si algo anda mal.
+CANARIO_VIDEO = 'dQw4w9WgXcQ'
+CANARIO_CANAL = '@YouTube'
+REVISION_SALUD_S = 3 * 3600
+salud = {'estado': 'desconocido', 'detalle': '', 'desde': None, 'revisado': None}   # estado: ok | falla | sin_conexion
+_salud_lock = threading.Lock()
+FALLA_FORMATO = 'YouTube cambió el formato de su página'
+FALLA_ROBOT = 'YouTube pide comprobar que no eres un robot'
+FALLA_COOKIES = 'YouTube muestra la página de aceptar cookies'
+
+
+def fijar_salud(estado, detalle=''):
+    with _salud_lock:
+        if salud['estado'] != estado:
+            salud['desde'] = time.time()
+            if estado != 'ok':
+                print('  (!) Lectura de YouTube: ' + (detalle or estado))
+        salud.update(estado=estado, detalle=detalle, revisado=time.time())
+
+
+def diagnosticar(pagina):
+    """Por qué una página de YouTube no trae lo esperado ('' si no hay una razón clara)."""
+    if 'consent.youtube.com' in pagina[:20000]:
+        return FALLA_COOKIES
+    if 'not a bot' in pagina or 'no eres un bot' in pagina or '/sorry/index' in pagina:
+        return FALLA_ROBOT
+    if 'ytInitialPlayerResponse' not in pagina and 'ytInitialData' not in pagina:
+        return FALLA_FORMATO
+    return ''
+
+
+def vigilar_pagina(pagina):
+    """Una página que no se pudo leer: si es por una causa general (no por ese video), se avisa."""
+    razon = diagnosticar(pagina)
+    if razon:
+        fijar_salud('falla', razon)
+
+
+def revisar_salud():
+    try:
+        pagina = bajar('https://www.youtube.com/watch?v=' + CANARIO_VIDEO)
+        d = detalles_video(pagina)
+        if not d or d['video'] != CANARIO_VIDEO or not d.get('canal'):
+            return fijar_salud('falla', diagnosticar(pagina) or 'no se pudo leer un video que siempre existe')
+        c = info_canal(CANARIO_CANAL)
+        if not RX_CANAL.match(c.get('canal', '')):
+            return fijar_salud('falla', 'no se pudo leer la página de un canal')
+        fijar_salud('ok')
+    except urllib.error.HTTPError as e:
+        fijar_salud('falla', 'YouTube respondió ' + str(e.code))
+    except (urllib.error.URLError, OSError):
+        fijar_salud('sin_conexion', 'no hay conexión con YouTube')
+
+
+def vigilar_salud():
+    time.sleep(5)   # que el servidor alcance a arrancar
+    while True:
+        revisar_salud()
+        time.sleep(REVISION_SALUD_S)
 
 
 # ---------- Datos del usuario en archivo ----------
@@ -453,6 +521,11 @@ class Manejador(SimpleHTTPRequestHandler):
     def api(self, que, q):
         if que == 'estado':
             return {'ok': True}
+        if que == 'salud':
+            if q.get('revisar') == '1':
+                revisar_salud()
+            with _salud_lock:
+                return dict(salud)
         if que == 'datos':
             return {'datos': leer_datos(), 'archivo': ARCHIVO_DATOS}
         if que == 'canal' and RX_RUTA.match(q.get('ruta', '')):
@@ -518,18 +591,24 @@ class Manejador(SimpleHTTPRequestHandler):
     def log_message(self, formato, *args):
         # Solo se anotan las consultas a YouTube y los errores, no cada archivo entregado ni cada guardado
         error = len(args) > 1 and str(args[1])[:1] in '45'
-        rutina = any(self.path.startswith(r) for r in ('/api/datos', '/api/estado', '/api/camara', '/api/eventos'))
+        rutina = any(self.path.startswith(r) for r in ('/api/datos', '/api/estado', '/api/camara', '/api/eventos', '/api/salud'))
         if error or (self.path.startswith('/api/') and not rutina):
             super().log_message(formato, *args)
 
 
 def main():
+    # Si la consola de Windows no puede mostrar algún carácter, que lo reemplace en vez de fallar
+    try:
+        sys.stdout.reconfigure(errors='replace')
+    except (AttributeError, ValueError):
+        pass
     puerto = int(sys.argv[1]) if len(sys.argv) > 1 else PUERTO_POR_DEFECTO
     Manejador.puerto = puerto
     servidor = ThreadingHTTPServer(('127.0.0.1', puerto), Manejador)
     print('  Sirviendo ' + CARPETA)
     print('  Tus datos se guardan en ' + ARCHIVO_DATOS)
     threading.Thread(target=escuchar_teclas_multimedia, daemon=True).start()
+    threading.Thread(target=vigilar_salud, daemon=True).start()
     try:
         servidor.serve_forever()
     except KeyboardInterrupt:

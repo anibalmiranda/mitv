@@ -8,10 +8,11 @@ $('btnGuardar').addEventListener('click', guardarPanel);
 fondo.addEventListener('click', e => { if (e.target === fondo) cerrarPanel(); });
 document.addEventListener('keydown', e => {
   const panelAbierto = fondo.classList.contains('abierto');
-  const buscarAbierto = fondoBuscar.classList.contains('abierto');
+  const buscarAbierto = fondoBuscar.classList.contains('abierto') || fondoEstado.classList.contains('abierto');
   const enCampo = e.target && e.target.matches && e.target.matches('input, textarea, select');
   if (e.key === 'Escape') {
     if (document.body.classList.contains('solo-visual')) { e.preventDefault(); salirEscena(); return; }   // vuelve al video
+    if (fondoEstado.classList.contains('abierto')) { e.preventDefault(); cerrarEstado(); return; }
     if (buscarAbierto) { e.preventDefault(); cerrarBuscar(); return; }
     if (panelAbierto) cerrarPanel();
     else if (document.body.classList.contains('tira-abierta')) cerrarTira();
@@ -19,7 +20,7 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Enter' && e.ctrlKey && panelAbierto) guardarPanel();
   // Atajos de una tecla (no mientras escribes en un campo ni con una ventana abierta):
-  //  + / − volumen del que suena · M silenciar todo · S super favorito · T cuenta atrás · B audio de fondo · F pantalla completa · C carrusel · 1 a 9 ir a ese video
+  //  + / − volumen del que suena · M silenciar todo · S super favorito · T cuenta atrás · B audio de fondo · E estado de la lista · F pantalla completa · C carrusel · 1 a 9 ir a ese video
   if (!panelAbierto && !buscarAbierto && !enCampo && !e.ctrlKey && !e.altKey && !e.metaKey) {
     const k = e.key.toLowerCase();
     if (k === '+' || k === '=') { e.preventDefault(); cambiarVolumenActual(5); }
@@ -28,6 +29,7 @@ document.addEventListener('keydown', e => {
     if (k === 's') { e.preventDefault(); alternarVentanaSuperFav(); }
     if (k === 't') { e.preventDefault(); alternarCuenta(); }
     if (k === 'b') { e.preventDefault(); alternarFondo(); }
+    if (k === 'e') { e.preventDefault(); abrirEstado(); }
     if (k === 'f') { e.preventDefault(); btnPantalla.click(); }
     if (k === 'c') {
       e.preventDefault();
@@ -64,6 +66,7 @@ mudarseSiHaceFalta().then(mudado => {
     if (fondo.classList.contains('abierto') && fuente().length) cerrarPanel();
     ajustarCamaras();   // ya se sabe si hay servidor: algunas cámaras se conectan a través de él
     conectarTeclasMultimedia();
+    consultarSalud();   // ¿funciona la lectura de YouTube?
   });
 });
 // Si el visualizador quedó encendido, se reactiva solo (el permiso de la entrada ya está dado)
