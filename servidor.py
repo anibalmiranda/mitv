@@ -226,6 +226,7 @@ class Camara:
                         tipo = (r.headers.get('Content-Type') or '').lower()
                         if 'multipart' in tipo:
                             self.leer_stream(r)          # MJPEG: vuelve cuando se corta o nadie la mira
+                            time.sleep(1)                # si la cámara corta seguido, no reconectar en ráfaga
                         elif tipo.startswith('image/'):
                             self.guardar(r.read(MAX_CUADRO))
                             time.sleep(CAMARA_FOTO_CADA_S)
