@@ -7,6 +7,7 @@
 #   /api/directo?canal=UC…    → directo que el canal está transmitiendo ahora
 #   /api/datos (GET / POST)   → copia en archivo de tus listas, favoritos y ajustes (ver CARPETA_DATOS)
 #   /api/camara?url=...       → último cuadro de una cámara IP (MJPEG o foto fija), ver "Cámaras IP"
+#   /api/eventos              → conexión abierta por la que llegan las teclas multimedia (solo Windows)
 # Solo usa la biblioteca estándar de Python (no hay que instalar nada) y solo escucha en este equipo.
 #
 # Uso: python servidor.py [puerto]   (por defecto 18090)
@@ -17,6 +18,7 @@
 import html
 import json
 import os
+import queue
 import re
 import sys
 import threading
@@ -288,6 +290,69 @@ def cuadro_camara(url):
     return cam.cuadro if cam.cuadro is not None else (cam.error or 'conectando con la cámara…')
 
 
+# ---------- Teclas multimedia del teclado (solo Windows) ----------
+# Se escuchan en todo Windows (aunque el navegador no esté al frente) con un "gancho" de teclado. Solo se
+# toman mientras la página está abierta (conectada a /api/eventos): entonces no siguen a otros programas
+# (Spotify, el propio navegador). Con la página cerrada, las teclas funcionan como siempre.
+TECLAS_MULTIMEDIA = {0xB3: 'playpausa', 0xB0: 'siguiente', 0xB1: 'anterior', 0xB2: 'detener'}
+_oyentes = []                  # una cola por página conectada; las teclas van a la más reciente
+_oyentes_lock = threading.Lock()
+
+
+def avisar_tecla(accion):
+    with _oyentes_lock:
+        cola = _oyentes[-1] if _oyentes else None
+    if cola:
+        cola.put(accion)
+    return bool(cola)
+
+
+def escuchar_teclas_multimedia():
+    if sys.platform != 'win32':
+        return
+    import ctypes
+    from ctypes import wintypes
+    user32 = ctypes.WinDLL('user32', use_last_error=True)
+    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+    WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP = 13, 0x0100, 0x0101, 0x0104, 0x0105
+
+    class KBDLLHOOKSTRUCT(ctypes.Structure):
+        _fields_ = [('vkCode', wintypes.DWORD), ('scanCode', wintypes.DWORD), ('flags', wintypes.DWORD),
+                    ('time', wintypes.DWORD), ('dwExtraInfo', ctypes.c_size_t)]
+
+    LRESULT = ctypes.c_ssize_t
+    HOOKPROC = ctypes.WINFUNCTYPE(LRESULT, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM)
+    user32.SetWindowsHookExW.argtypes = [ctypes.c_int, HOOKPROC, wintypes.HINSTANCE, wintypes.DWORD]
+    user32.SetWindowsHookExW.restype = wintypes.HHOOK
+    user32.CallNextHookEx.argtypes = [wintypes.HHOOK, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM]
+    user32.CallNextHookEx.restype = LRESULT
+    user32.GetMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND, wintypes.UINT, wintypes.UINT]
+    kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+    kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+    tomadas = set()   # teclas cuyo "apretar" se tomó: su "soltar" tampoco sigue a otros programas
+
+    def gancho(codigo, wparam, lparam):
+        if codigo == 0:
+            vk = ctypes.cast(lparam, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents.vkCode
+            accion = TECLAS_MULTIMEDIA.get(vk)
+            if accion and wparam in (WM_KEYDOWN, WM_SYSKEYDOWN) and avisar_tecla(accion):
+                tomadas.add(vk)
+                return 1
+            if wparam in (WM_KEYUP, WM_SYSKEYUP) and vk in tomadas:
+                tomadas.discard(vk)
+                return 1
+        return user32.CallNextHookEx(None, codigo, wparam, lparam)
+
+    funcion = HOOKPROC(gancho)   # se guarda la referencia: si Python la libera, Windows llamaría a la nada
+    if not user32.SetWindowsHookExW(WH_KEYBOARD_LL, funcion, kernel32.GetModuleHandleW(None), 0):
+        print('  (No se pudieron escuchar las teclas multimedia: error %d)' % ctypes.get_last_error())
+        return
+    msg = wintypes.MSG()
+    while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:   # el gancho necesita este bucle de mensajes
+        user32.TranslateMessage(ctypes.byref(msg))
+        user32.DispatchMessageW(ctypes.byref(msg))
+
+
 # ---------- Servidor ----------
 class Manejador(SimpleHTTPRequestHandler):
     puerto = PUERTO_POR_DEFECTO
@@ -346,6 +411,8 @@ class Manejador(SimpleHTTPRequestHandler):
         q = {k: v[0] for k, v in urllib.parse.parse_qs(url.query).items()}
         if url.path == '/api/camara':
             return self.entregar_camara(q.get('url', ''))
+        if url.path == '/api/eventos':
+            return self.entregar_eventos()
         try:
             res = self.api(url.path[5:], q)
         except urllib.error.HTTPError as e:
@@ -396,6 +463,31 @@ class Manejador(SimpleHTTPRequestHandler):
             return recordado('directo:' + q['canal'], 60, lambda: info_directo(q['canal']))
         return None
 
+    # Conexión abierta con la página (Server-Sent Events): por aquí le llegan las teclas multimedia
+    def entregar_eventos(self):
+        cola = queue.Queue()
+        with _oyentes_lock:
+            _oyentes.append(cola)
+        try:
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            self.wfile.write(b': conectado\n\n')
+            self.wfile.flush()
+            while True:
+                try:
+                    texto = 'data: ' + json.dumps({'tecla': cola.get(timeout=5)}) + '\n\n'
+                except queue.Empty:
+                    texto = ': sigo aqui\n\n'   # así se nota pronto si la página se cerró
+                self.wfile.write(texto.encode('utf-8'))
+                self.wfile.flush()
+        except OSError:
+            pass   # la página se cerró o se recargó
+        finally:
+            with _oyentes_lock:
+                _oyentes.remove(cola)
+
     def entregar_camara(self, url_camara):
         if not re.match(r'^https?://', url_camara, re.IGNORECASE):
             return self.responder(400, {'error': 'falta la dirección de la cámara (http:// o https://)'})
@@ -436,6 +528,7 @@ def main():
     servidor = ThreadingHTTPServer(('127.0.0.1', puerto), Manejador)
     print('  Sirviendo ' + CARPETA)
     print('  Tus datos se guardan en ' + ARCHIVO_DATOS)
+    threading.Thread(target=escuchar_teclas_multimedia, daemon=True).start()
     try:
         servidor.serve_forever()
     except KeyboardInterrupt:

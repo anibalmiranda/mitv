@@ -47,6 +47,7 @@ mudarseSiHaceFalta().then(mudado => {
   sincronizarAlIniciar().then(() => {
     if (fondo.classList.contains('abierto') && fuente().length) cerrarPanel();
     ajustarCamaras();   // ya se sabe si hay servidor: algunas cámaras se conectan a través de él
+    conectarTeclasMultimedia();
   });
 });
 // Si el visualizador quedó encendido, se reactiva solo (el permiso de la entrada ya está dado)
