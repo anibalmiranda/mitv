@@ -604,3 +604,35 @@ body.modo-audio .celda .fondo { top: 50%; transform: translateY(-50%); right: 13
 }
 #avisoSistema.visible { display: flex; }
 #avisoSistema button { border: 0; background: none; color: #ffd9a0; cursor: pointer; font-size: 14px; }
+
+/* Canales de TV (tv.js): el video ocupa el cuadro igual que un reproductor de YouTube */
+.celda video.tv { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+body.arrastrando .celda video.tv { pointer-events: none; }
+#superFav video, #audioFondo video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+
+/* Ventana de importar lista de TV, mismo estilo que "Buscar parecido" */
+#fondoTv {
+  position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 32;
+  display: none; align-items: center; justify-content: center;
+}
+#fondoTv.abierto { display: flex; }
+#panelTv {
+  background: var(--panel); border: 1px solid var(--borde); border-radius: 10px;
+  width: min(720px, 94vw); max-height: 88vh; padding: 18px; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+#panelTv h2 { font-size: 17px; font-weight: 600; }
+#panelTv p { font-size: 13px; color: var(--suave); line-height: 1.5; }
+#panelTv a { color: #7fb8ff; font-size: 12px; }
+#panelTv input[type=text] {
+  background: #111113; color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 140px;
+}
+#panelTv input[type=file] { font-size: 13px; color: var(--suave); }
+#tvGrupos {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 12px;
+  max-height: 34vh; overflow-y: auto; font-size: 13px; color: var(--texto);
+}
+#tvGrupos label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+#tvProgreso { height: 4px; background: #2a2a2f; border-radius: 2px; overflow: hidden; }
+#tvBarra { height: 100%; width: 0; background: #2cb67d; transition: width .2s; }
+#tvAviso { font-size: 12px; color: #9fd0ff; min-height: 16px; }

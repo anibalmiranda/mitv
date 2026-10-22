@@ -3,8 +3,9 @@
 // Los archivos se cargan en orden desde index.html y comparten variables (scripts clásicos).
 
 // ---------- Comunicación con el reproductor de YouTube (postMessage) ----------
+// También sirve para los canales de TV (<video class="tv">, tv.js): traduce las mismas órdenes.
 function comandoYT(iframe, func, args) {
-  if (!iframe || !iframe.contentWindow) return;
+  if (!iframe) return;
   // Con el audio de fondo activo (fondo.js), ningún video de la grilla puede sonar: "quitar silencio" se cambia
   // por "silenciar" y se ignora setVolume (en el reproductor de YouTube, setVolume también quita el silencio)
   if (fondoActivo && (func === 'unMute' || func === 'setVolume') && contenedor.contains(iframe)) {
@@ -12,6 +13,8 @@ function comandoYT(iframe, func, args) {
     func = 'mute';
     args = [];
   }
+  if (iframe.tagName === 'VIDEO') { comandoVideo(iframe, func, args || []); return; }
+  if (!iframe.contentWindow) return;
   iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: func, args: args || [] }), '*');
 }
 // Le pide al reproductor que informe título, autor y estado
@@ -182,7 +185,7 @@ function retomarAudio(e) {
 // - El que terminó (o uno silenciado que terminó) vuelve a partir en un punto al azar, para que la grilla
 //   no quede llena de pantallas de "fin de video". En modo solo audio, los silenciados quedan pausados.
 function reiniciarVideo(celda) {
-  const ifr = celda.querySelector('iframe');
+  const ifr = celda.querySelector(SEL_REPRODUCTOR);
   if (!ifr) return;
   const mem = celda._videoActual && config.duraciones[celda._videoActual];
   const dur = celda._dur || (mem && !mem.vivo ? mem.d : 0);

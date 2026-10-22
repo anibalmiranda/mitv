@@ -28,7 +28,7 @@ function saltoAleatorio(celda) {
   const mem = celda._videoActual && config.duraciones[celda._videoActual];
   const dur = celda._dur || (mem && !mem.vivo ? mem.d : 0);
   const seg = segundoAleatorio(dur);   // entre 10 s y duración − 10 s
-  if (seg) comandoYT(celda.querySelector('iframe'), 'seekTo', [seg, true]);
+  if (seg) comandoYT(celda.querySelector(SEL_REPRODUCTOR), 'seekTo', [seg, true]);
 }
 function siguienteDelCarrusel() {
   const lista = validas();

@@ -8,7 +8,7 @@
 <!-- Abre de antemano las conexiones con YouTube y sus miniaturas (la grilla carga más rápido) -->
 <link rel="preconnect" href="https://www.youtube.com">
 <link rel="preconnect" href="https://i.ytimg.com">
-<link rel="stylesheet" href="css/estilos.css?v=20261022s">
+<link rel="stylesheet" href="css/estilos.css?v=20261022t">
 </head>
 <body>
 
@@ -138,7 +138,7 @@
       <button class="btn secundario" id="btnNueva">+ Nueva lista</button>
       <button class="btn peligro" id="btnEliminar">Eliminar lista</button>
     </div>
-    <p id="ayudaPanel">Una URL por línea: <code>watch?v=</code>, <code>youtu.be/</code>, <code>/live/</code>, <code>/shorts/</code>, <code>/embed/</code> , canales en vivo <code>youtube.com/channel/UC…</code> o por su <code>@nombre</code> (<code>youtube.com/@nombre</code>; necesita abrir con iniciar.bat), cámaras IP (<code>http://IP:puerto/mjpg/video.mjpg</code>, sin audio) y playlists (<code>playlist?list=</code> o <code>watch?v=…&amp;list=…</code>; con "Inicio aleatorio" parten en un video al azar y siguen mezcladas). Clic sobre un video le da el audio (uno a la vez). Doble clic amplía / vuelve a miniatura. Arrastra un cuadro y suéltalo sobre otro: queda justo antes de ese. ☆ marca favorito (máx. 9). Las líneas que empiezan con <code>#</code> se ignoran.<br><b>Atajos:</b> <code>M</code> silenciar todo · <code>S</code> super favorito 👑 (miniatura en la esquina) · <code>T</code> cuenta atrás · <code>B</code> audio de fondo 🎵 (el audio de un video para toda la grilla) · <code>E</code> estado de la lista · <code>F</code> pantalla completa · <code>C</code> carrusel · <code>1</code>–<code>9</code> ir a ese video · <code>+</code> / <code>−</code> volumen del que suena · flechas: anterior / siguiente y tira (en pantalla completa) · <code>Esc</code> volver a la grilla · teclas multimedia ⏯ ⏭ ⏮ ⏹.</p>
+    <p id="ayudaPanel">Una URL por línea: <code>watch?v=</code>, <code>youtu.be/</code>, <code>/live/</code>, <code>/shorts/</code>, <code>/embed/</code> , canales en vivo <code>youtube.com/channel/UC…</code> o por su <code>@nombre</code> (<code>youtube.com/@nombre</code>; necesita abrir con iniciar.bat), cámaras IP (<code>http://IP:puerto/mjpg/video.mjpg</code>, sin audio), canales de TV <code>….m3u8</code> (o importa una lista M3U con 📺) y playlists (<code>playlist?list=</code> o <code>watch?v=…&amp;list=…</code>; con "Inicio aleatorio" parten en un video al azar y siguen mezcladas). Clic sobre un video le da el audio (uno a la vez). Doble clic amplía / vuelve a miniatura. Arrastra un cuadro y suéltalo sobre otro: queda justo antes de ese. ☆ marca favorito (máx. 9). Las líneas que empiezan con <code>#</code> se ignoran.<br><b>Atajos:</b> <code>M</code> silenciar todo · <code>S</code> super favorito 👑 (miniatura en la esquina) · <code>T</code> cuenta atrás · <code>B</code> audio de fondo 🎵 (el audio de un video para toda la grilla) · <code>E</code> estado de la lista · <code>F</code> pantalla completa · <code>C</code> carrusel · <code>1</code>–<code>9</code> ir a ese video · <code>+</code> / <code>−</code> volumen del que suena · flechas: anterior / siguiente y tira (en pantalla completa) · <code>Esc</code> volver a la grilla · teclas multimedia ⏯ ⏭ ⏮ ⏹.</p>
     <textarea id="urls" spellcheck="false" placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX&#10;https://youtu.be/XXXXXXXXXXX&#10;https://www.youtube.com/channel/UCxxxxxxxxxxxxxxxxxxxxxx&#10;@NombreDelCanal&#10;http://192.168.1.50:8080/mjpg/video.mjpg"></textarea>
     <div class="fila">
       <label title="De dónde lee el sonido el visualizador. 'Mezcla estéreo' entrega lo que suena en el PC.">Entrada del visualizador
@@ -147,6 +147,7 @@
     <div class="fila" id="filaRespaldo">
       <span class="etiqueta-fila">Respaldo</span>
       <button class="btn secundario" id="btnExportar" title="Descarga un archivo .json con tus listas, favoritos, nombres, duraciones y ajustes">⬇ Exportar configuración</button>
+      <button class="btn secundario" id="btnImportarTv" title="Carga una lista de canales de TV (.m3u / .m3u8, como tv.m3u8 de TDTChannels): cada grupo queda como sub-lista">📺 Importar lista de TV (M3U)</button>
       <button class="btn secundario" id="btnEstado" title="Qué cuadros funcionan, cuáles están caídos o bloqueados, y revisar los directos (tecla E)">📋 Estado de la lista</button>
       <button class="btn secundario" id="btnImportar" title="Carga un archivo .json exportado antes">⬆ Importar configuración</button>
       <input type="file" id="archivoImportar" accept=".json,application/json" hidden>
@@ -204,10 +205,31 @@
     <div class="fila"><span id="estadoLectura"></span><span class="espacio"></span>
       <button class="btn secundario" id="btnRevisarLectura" title="Vuelve a probar ahora si se pueden leer las páginas de YouTube">Revisar lectura</button></div>
     <div class="fila"><span id="estadoResumen"></span><span class="espacio"></span>
+      <button class="btn secundario" id="btnComprobar" title="Revisa todas las líneas de esta lista; arregla sola lo que puede y te ofrece quitar lo que no funciona">🧹 Comprobar lista</button>
+      <button class="btn peligro" id="btnQuitarMalas" hidden title="Las deja comentadas en la lista (con su motivo), no se borran">Quitar los que no funcionan</button>
+      <button class="btn secundario" id="btnDescartados" title="Vuelve a probar las líneas comentadas por Comprobar o al importar, y restaura las que funcionan">↺ Revisar descartados</button>
       <button class="btn secundario" id="btnRevisarDirectos" title="Revisa los directos de TODAS tus listas y cambia los que su canal ahora transmite con otra URL (también se hace solo cada 30 min)">📡 Revisar directos ahora</button>
       <button class="btn secundario" id="btnEstadoCerrar">Cerrar</button></div>
     <div id="estadoRevision"></div>
     <div id="estadoTabla"></div>
+  </div>
+</div>
+
+<!-- Importar una lista de canales de TV M3U (tv.js) -->
+<div id="fondoTv">
+  <div id="panelTv">
+    <h2>📺 Importar lista de TV (M3U)</h2>
+    <p>Cada grupo de la lista (Generalistas, Informativos…) queda como sub-lista, agrupada en el selector bajo el nombre que elijas.</p>
+    <div class="fila"><input type="file" id="tvArchivo" accept=".m3u,.m3u8,audio/x-mpegurl,application/vnd.apple.mpegurl">
+      <label>Nombre <input type="text" id="tvNombre" value="TV" maxlength="30"></label></div>
+    <div class="fila"><span class="etiqueta-fila">Grupos</span><a href="#" id="tvTodos">marcar / desmarcar todos</a></div>
+    <div id="tvGrupos"></div>
+    <div class="fila"><label><input type="checkbox" id="tvComprobar"> <span id="tvComprobarTexto"></span></label></div>
+    <div id="tvProgreso"><div id="tvBarra"></div></div>
+    <div id="tvAviso"></div>
+    <div class="fila"><span class="espacio"></span>
+      <button class="btn secundario" id="btnTvCerrar">Cerrar</button>
+      <button class="btn primario" id="btnTvImportar" disabled>Importar</button></div>
   </div>
 </div>
 
@@ -233,30 +255,34 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261022s"></script>
-<script src="js/urls.js?v=20261022s"></script>
-<script src="js/grilla.js?v=20261022s"></script>
-<script src="js/favoritos.js?v=20261022s"></script>
-<script src="js/reproductor.js?v=20261022s"></script>
-<script src="js/audio.js?v=20261022s"></script>
-<script src="js/visualizador.js?v=20261022s"></script>
-<script src="js/pantalla.js?v=20261022s"></script>
-<script src="js/navegacion.js?v=20261022s"></script>
-<script src="js/carrusel.js?v=20261022s"></script>
-<script src="js/ampliar.js?v=20261022s"></script>
-<script src="js/pausa.js?v=20261022s"></script>
-<script src="js/panel.js?v=20261022s"></script>
-<script src="js/respaldo.js?v=20261022s"></script>
-<script src="js/camaras.js?v=20261022s"></script>
-<script src="js/buscar.js?v=20261022s"></script>
-<script src="js/externos.js?v=20261022s"></script>
-<script src="js/directos.js?v=20261022s"></script>
-<script src="js/sincronizar.js?v=20261022s"></script>
-<script src="js/teclas.js?v=20261022s"></script>
-<script src="js/superfav.js?v=20261022s"></script>
-<script src="js/cuentaatras.js?v=20261022s"></script>
-<script src="js/fondo.js?v=20261022s"></script>
-<script src="js/estado.js?v=20261022s"></script>
-<script src="js/main.js?v=20261022s"></script>
+<!-- hls.js (Apache 2.0, js/vendor/LICENSE-hls.js.txt): reproduce canales de TV .m3u8 -->
+<script src="js/vendor/hls.min.js?v=1.6.13"></script>
+<script src="js/config.js?v=20261022t"></script>
+<script src="js/urls.js?v=20261022t"></script>
+<script src="js/grilla.js?v=20261022t"></script>
+<script src="js/favoritos.js?v=20261022t"></script>
+<script src="js/reproductor.js?v=20261022t"></script>
+<script src="js/audio.js?v=20261022t"></script>
+<script src="js/visualizador.js?v=20261022t"></script>
+<script src="js/pantalla.js?v=20261022t"></script>
+<script src="js/navegacion.js?v=20261022t"></script>
+<script src="js/carrusel.js?v=20261022t"></script>
+<script src="js/ampliar.js?v=20261022t"></script>
+<script src="js/pausa.js?v=20261022t"></script>
+<script src="js/panel.js?v=20261022t"></script>
+<script src="js/respaldo.js?v=20261022t"></script>
+<script src="js/camaras.js?v=20261022t"></script>
+<script src="js/buscar.js?v=20261022t"></script>
+<script src="js/externos.js?v=20261022t"></script>
+<script src="js/directos.js?v=20261022t"></script>
+<script src="js/sincronizar.js?v=20261022t"></script>
+<script src="js/teclas.js?v=20261022t"></script>
+<script src="js/superfav.js?v=20261022t"></script>
+<script src="js/cuentaatras.js?v=20261022t"></script>
+<script src="js/fondo.js?v=20261022t"></script>
+<script src="js/estado.js?v=20261022t"></script>
+<script src="js/tv.js?v=20261022t"></script>
+<script src="js/comprobar.js?v=20261022t"></script>
+<script src="js/main.js?v=20261022t"></script>
 </body>
 </html>

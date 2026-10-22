@@ -64,7 +64,7 @@ function cambiarAmpliado(nueva) {
 // Lo que sí se hace: 1) el ampliado ocupa toda la pantalla en pantalla completa (más tamaño = más resolución)
 // y 2) se le pide la calidad más alta. Si el reproductor no hace caso a esa petición, se queda en automático.
 function pedirMaxCalidad(celda) {
-  const ifr = celda && celda.querySelector('iframe');
+  const ifr = celda && celda.querySelector(SEL_REPRODUCTOR);
   if (!ifr) return;
   const pedir = () => {
     comandoYT(ifr, 'setPlaybackQualityRange', ['highres', 'highres']);

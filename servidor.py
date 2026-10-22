@@ -9,6 +9,8 @@
 #   /api/camara?url=...       → último cuadro de una cámara IP (MJPEG o foto fija), ver "Cámaras IP"
 #   /api/eventos              → conexión abierta por la que llegan las teclas multimedia (solo Windows)
 #   /api/salud[?revisar=1]    → si la lectura de YouTube funciona (ver "Salud de la lectura de YouTube")
+#   /api/canalhls?url=...     → revisa a fondo un canal de TV .m3u8 (ver "Canales de TV por HLS")
+#   /api/hls?url=...          → intermediario para canales .m3u8 que el navegador no puede leer directo
 # Solo usa la biblioteca estándar de Python (no hay que instalar nada) y solo escucha en este equipo.
 #
 # Uso: python servidor.py [puerto]   (por defecto 18090)
@@ -139,6 +141,7 @@ def info_video(vid):
         return {'error': 'el video no existe o no se puede leer'}
     d['directo'] = '"isLiveContent":true' in pagina   # es (o fue) una transmisión en vivo
     d['vivo'] = d['directo'] and en_vivo_ahora(pagina)
+    d['incrustable'] = '"playableInEmbed":false' not in pagina   # el dueño permite verlo fuera de YouTube
     return d
 
 
@@ -151,6 +154,106 @@ def info_directo(canal):
     d['vivo'] = True
     d['canal'] = d.get('canal') or canal
     return d
+
+
+# ---------- Canales de TV por HLS (.m3u8) ----------
+# revisar_hls: revisa un canal a fondo (lista maestra → primera calidad → primer fragmento de video), porque hay
+# canales que entregan la lista a cualquiera y recién bloquean el video (p. ej. los "GEO" fuera de España).
+# También averigua si el navegador puede leerlo directo (CORS); si no, la página lo pide a través de /api/hls,
+# que reescribe las direcciones de la lista para que todo pase por este servidor.
+RX_MARCADOR_PUBLICIDAD = re.compile(r'\[[A-Z_]{2,}\]')   # [DEVICE_ID], [IP]... que la app original debía rellenar
+MAX_LISTA_HLS = 2 * 1024 * 1024
+
+
+def _pedir_hls(url, poco=False):
+    req = urllib.request.Request(url, headers={'User-Agent': CABECERAS_YT['User-Agent'],
+                                               'Origin': 'http://127.0.0.1:%d' % Manejador.puerto})
+    if poco:
+        req.add_header('Range', 'bytes=0-2047')
+    r = urllib.request.urlopen(req, timeout=12)
+    cuerpo = r.read(2048 if poco else MAX_LISTA_HLS)
+    r.close()
+    return r, cuerpo
+
+
+def _ultima_uri(texto):
+    """Último fragmento de video de una lista (la línea que sigue al último #EXTINF)."""
+    lineas = texto.splitlines()
+    for i in range(len(lineas) - 1, -1, -1):
+        if lineas[i].startswith('#EXTINF'):
+            for sig in lineas[i + 1:]:
+                sig = sig.strip()
+                if sig and not sig.startswith('#'):
+                    return sig
+    return None
+
+
+def _primera_uri(texto, tras):
+    """Primera dirección que viene después de una línea que empieza con `tras` (#EXT-X-STREAM-INF, #EXTINF)."""
+    lineas = texto.splitlines()
+    for i, l in enumerate(lineas):
+        if l.startswith(tras):
+            for sig in lineas[i + 1:]:
+                sig = sig.strip()
+                if sig and not sig.startswith('#'):
+                    return sig
+    m = re.search(r'#EXT-X-MAP:[^\n]*URI="([^"]+)"', texto)   # fMP4: el segmento de inicio
+    return m.group(1) if (m and tras == '#EXTINF') else None
+
+
+def revisar_hls(url):
+    if RX_MARCADOR_PUBLICIDAD.search(url):
+        return {'estado': 'publicidad', 'detalle': 'la dirección trae datos de publicidad sin rellenar'}
+    cors = True
+    try:
+        r, cuerpo = _pedir_hls(url)
+        cors = cors and bool(r.headers.get('Access-Control-Allow-Origin'))
+        texto = cuerpo.decode('utf-8', 'replace')
+        base = r.geturl()
+        if '#EXTM3U' not in texto:
+            return {'estado': 'noexiste', 'detalle': 'la dirección no entrega una lista de video'}
+        if '#EXT-X-STREAM-INF' in texto:                      # lista maestra: se entra a la primera calidad
+            variante = _primera_uri(texto, '#EXT-X-STREAM-INF')
+            if not variante:
+                return {'estado': 'noexiste', 'detalle': 'la lista no trae calidades de video'}
+            r, cuerpo = _pedir_hls(urllib.parse.urljoin(base, variante))
+            cors = cors and bool(r.headers.get('Access-Control-Allow-Origin'))
+            texto = cuerpo.decode('utf-8', 'replace')
+            base = r.geturl()
+        if re.search(r'#EXT-X-KEY:[^\n]*(METHOD=SAMPLE-AES|com\.widevine|com\.microsoft\.playready|com\.apple\.streamingkeydelivery)', texto):
+            return {'estado': 'drm', 'detalle': 'el video está cifrado (DRM): solo se ve en la app oficial'}
+        # El ÚLTIMO fragmento (el en vivo, lo que de verdad se ve): en las listas con DVR el primero puede ser de
+        # hace horas y estar bloqueado por derechos de otro programa (RTVE bloquea fuera de España según el programa)
+        segmento = _ultima_uri(texto) or _primera_uri(texto, '#EXTINF')
+        if segmento:
+            r, _ = _pedir_hls(urllib.parse.urljoin(base, segmento), poco=True)
+            cors = cors and bool(r.headers.get('Access-Control-Allow-Origin'))
+        return {'estado': 'ok', 'cors': cors}
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 407):
+            return {'estado': 'autorizacion', 'detalle': 'pide autorización (%d)' % e.code}
+        if e.code in (403, 451):
+            return {'estado': 'bloqueado', 'detalle': 'bloqueado (%d): por país o sin permiso' % e.code}
+        if e.code in (404, 410):
+            return {'estado': 'noexiste', 'detalle': 'ya no existe (%d)' % e.code}
+        return {'estado': 'error', 'detalle': 'el canal respondió %d' % e.code}
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return {'estado': 'noresponde', 'detalle': 'no responde (' + str(getattr(e, 'reason', e))[:60] + ')'}
+
+
+def reescribir_lista_hls(texto, base):
+    """Cambia cada dirección de la lista por /api/hls?url=… (para canales que el navegador no puede leer directo)."""
+    def via(uri):
+        return '/api/hls?url=' + urllib.parse.quote(urllib.parse.urljoin(base, uri), safe='')
+    salida = []
+    for linea in texto.splitlines():
+        if linea.strip() and not linea.startswith('#'):
+            salida.append(via(linea.strip()))
+        elif linea.startswith('#') and 'URI="' in linea:
+            salida.append(re.sub(r'URI="([^"]+)"', lambda m: 'URI="' + via(m.group(1)) + '"', linea))
+        else:
+            salida.append(linea)
+    return '\n'.join(salida) + '\n'
 
 
 # ---------- Salud de la lectura de YouTube ----------
@@ -482,6 +585,8 @@ class Manejador(SimpleHTTPRequestHandler):
             return self.entregar_camara(q.get('url', ''))
         if url.path == '/api/eventos':
             return self.entregar_eventos()
+        if url.path == '/api/hls':
+            return self.entregar_hls(q.get('url', ''))
         try:
             res = self.api(url.path[5:], q)
         except urllib.error.HTTPError as e:
@@ -533,6 +638,8 @@ class Manejador(SimpleHTTPRequestHandler):
             return recordado('canal:' + ruta, 7 * 86400, lambda: info_canal(ruta))
         if que == 'video' and RX_VIDEO.match(q.get('id', '')):
             return recordado('video:' + q['id'], 600, lambda: info_video(q['id']))
+        if que == 'canalhls' and re.match(r'^https?://', q.get('url', ''), re.IGNORECASE):
+            return recordado('hls:' + q['url'], 600, lambda: revisar_hls(q['url']))
         if que == 'directo' and RX_CANAL.match(q.get('canal', '')):
             return recordado('directo:' + q['canal'], 60, lambda: info_directo(q['canal']))
         return None
@@ -561,6 +668,30 @@ class Manejador(SimpleHTTPRequestHandler):
         finally:
             with _oyentes_lock:
                 _oyentes.remove(cola)
+
+    # Intermediario para canales HLS que el navegador no puede leer directo (sin permiso CORS)
+    def entregar_hls(self, url_hls):
+        if not re.match(r'^https?://', url_hls, re.IGNORECASE):
+            return self.responder(400, {'error': 'falta la dirección del canal (http:// o https://)'})
+        try:
+            req = urllib.request.Request(url_hls, headers={'User-Agent': CABECERAS_YT['User-Agent']})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                tipo = r.headers.get('Content-Type') or 'application/octet-stream'
+                datos = r.read(64 * 1024 * 1024)
+                base = r.geturl()
+        except urllib.error.HTTPError as e:
+            return self.responder(e.code, {'error': 'el canal respondió %d' % e.code})
+        except (urllib.error.URLError, OSError, ValueError):
+            return self.responder(502, {'error': 'el canal no responde'})
+        if 'mpegurl' in tipo.lower() or datos[:7] == b'#EXTM3U':
+            datos = reescribir_lista_hls(datos.decode('utf-8', 'replace'), base).encode('utf-8')
+            tipo = 'application/vnd.apple.mpegurl'
+        self.send_response(200)
+        self.send_header('Content-Type', tipo)
+        self.send_header('Cache-Control', 'no-store')
+        self.send_header('Content-Length', str(len(datos)))
+        self.end_headers()
+        self.wfile.write(datos)
 
     def entregar_camara(self, url_camara):
         if not re.match(r'^https?://', url_camara, re.IGNORECASE):
@@ -591,7 +722,7 @@ class Manejador(SimpleHTTPRequestHandler):
     def log_message(self, formato, *args):
         # Solo se anotan las consultas a YouTube y los errores, no cada archivo entregado ni cada guardado
         error = len(args) > 1 and str(args[1])[:1] in '45'
-        rutina = any(self.path.startswith(r) for r in ('/api/datos', '/api/estado', '/api/camara', '/api/eventos', '/api/salud'))
+        rutina = any(self.path.startswith(r) for r in ('/api/datos', '/api/estado', '/api/camara', '/api/eventos', '/api/salud', '/api/hls', '/api/canalhls'))
         if error or (self.path.startswith('/api/') and not rutina):
             super().log_message(formato, *args)
 

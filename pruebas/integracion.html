@@ -186,6 +186,53 @@ prueba('aviso si la lectura de YouTube falla, y se puede cerrar', () => {
   w.eval('servidorOk = false; saludActual = null'); w.pintarSalud();
 });
 prueba('la línea mala explica qué se acepta', () => cierto(/Solo se aceptan URLs de YouTube/.test(c()[3].textContent)));
+prueba('canal de TV: un <video> en la grilla, sin audio para la cámara de al lado', () => {
+  w.eval('config.listas["TV / Prueba"] = ["https://canal.invalid/vivo.m3u8", "# ✘ 2026-01-01 ya no existe (404) · Viejo · https://canal.invalid/viejo.m3u8"]');
+  w.pintarSelector();
+  cambiarLista('TV / Prueba');
+  const t = c()[0];
+  igual(t.dataset.tipo, 'hls');
+  cierto(t.querySelector('video.tv'), 'tiene un reproductor de video');
+  cierto(t.classList.contains('en-vivo'));
+  igual(w.puedeSonar(t), true, 'un canal de TV sí puede recibir el audio');
+  igual(c().length, 1, 'la línea descartada (comentada) no aparece en la grilla');
+});
+prueba('selector: las listas "Grupo / Sub" se agrupan', () => {
+  const g = [...d.querySelectorAll('#selLista optgroup')].find(x => x.label === 'TV');
+  cierto(g, 'existe el grupo TV');
+  igual([...g.querySelectorAll('option')].map(o => o.textContent), ['Prueba (1)'], 'sin contar comentarios');
+});
+prueba('importar M3U sin servidor: una sub-lista por grupo elegido', async () => {
+  w.abrirImportarTv();
+  const m3u = '#EXTM3U\n#EXTINF:-1 group-title="Noticias",Canal A\nhttps://a.invalid/a.m3u8\n#EXTINF:-1 group-title="Noticias",Canal B\nhttps://a.invalid/b.m3u8\n' +
+              '#EXTINF:-1 group-title="Música",Radio\nhttps://a.invalid/r.m3u8\n';
+  const dt = new w.DataTransfer(); dt.items.add(new w.File([m3u], 'mi_tv.m3u'));
+  const inp = d.getElementById('tvArchivo'); inp.files = dt.files; inp.dispatchEvent(new w.Event('change'));
+  await espera(300);
+  igual(d.getElementById('tvNombre').value, 'MI TV');
+  igual(d.querySelectorAll('#tvGrupos input').length, 2);
+  cierto(!d.getElementById('tvComprobar').checked, 'sin servidor no se puede comprobar');
+  d.querySelector('#tvGrupos input[value="Música"]').checked = false;
+  d.getElementById('btnTvImportar').click();
+  await espera(300);
+  igual(w.eval('config.listas["MI TV / Noticias"]'), ['https://a.invalid/a.m3u8', 'https://a.invalid/b.m3u8']);
+  igual(w.eval('config.listas["MI TV / Música"]'), undefined);
+  igual(w.eval('config.tv["hls:https://a.invalid/a.m3u8"].nombre'), 'Canal A');
+  w.cerrarImportarTv();
+  cambiarLista('A');
+  await espera(1500);
+});
+prueba('quitar los que no funcionan: se comentan con motivo y se reconocen como descartados', () => {
+  w.eval('config.listas["Z"] = ["https://www.youtube.com/watch?v=zzzzzzzzzzz", "https://www.youtube.com/watch?v=yyyyyyyyyyy"]; config.actual = "Z"');
+  w.render(true);
+  w.eval('comprobacion = { malas: [{ linea: "https://www.youtube.com/watch?v=yyyyyyyyyyy", motivo: "el video no existe" }] }');
+  w.quitarMalas();
+  const l = w.eval('config.listas.Z');
+  igual(l[0], 'https://www.youtube.com/watch?v=zzzzzzzzzzz');
+  cierto(/^# ✘ \d{4}-\d{2}-\d{2} el video no existe · https:\/\/www\.youtube\.com\/watch\?v=yyyyyyyyyyy$/.test(l[1]), l[1]);
+  igual(l[1].match(w.eval('RX_DESCARTE'))[1], 'https://www.youtube.com/watch?v=yyyyyyyyyyy');
+  cambiarLista('A');
+});
 
 f.onload = async () => {
   w = f.contentWindow; d = f.contentDocument;

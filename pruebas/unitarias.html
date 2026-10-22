@@ -86,6 +86,30 @@ prueba('punto al azar: dentro del video y no en los muy cortos', () => {
   for (let i = 0; i < 300; i++) { const s = segundoAleatorio(100); cierto(s >= 10 && s <= 90, 'fuera de rango: ' + s); }
 });
 
+prueba('canales de TV: las direcciones .m3u8 son tipo hls (también con parámetros)', () => {
+  igual(p('https://canal.tv/vivo/index.m3u8'), { tipo: 'hls', id: 'https://canal.tv/vivo/index.m3u8' });
+  igual(parsear('https://canal.tv/p.m3u8?network_id=5').tipo, 'hls');
+  igual(parsear('http://1.2.3.4/video.mjpg').tipo, 'camara', 'lo demás sigue siendo cámara');
+});
+prueba('nombre de un canal de TV: el de la lista importada o el del servidor', () => {
+  config.tv['hls:https://canal.tv/a.m3u8'] = { nombre: '24h', grupo: 'Informativos' };
+  igual(nombreInicial(parsear('https://canal.tv/a.m3u8'), 0), '24h');
+  igual(nombreInicial(parsear('https://otro.tv/b.m3u8'), 0), 'Canal de TV otro.tv');
+});
+prueba('leerM3U: grupos, nombres, logos y direcciones de respaldo del mismo canal', () => {
+  const m3u = '#EXTM3U url-tvg="x"\r\n' +
+    '#EXTINF:-1 tvg-id="La1.TV" tvg-logo="https://logo/1.png" group-title="Generalistas" tvg-name="La 1",La 1\r\nhttps://a/la1.m3u8\r\n' +
+    '#EXTINF:-1 tvg-id="La1.TV" group-title="Generalistas",La 1 (respaldo)\r\nhttps://b/la1.m3u8\r\n' +
+    '#EXTINF:-1 group-title="Informativos",24h\r\n#EXTVLCOPT:http-user-agent=x\r\nhttps://a/24h.m3u8\r\n' +
+    '#EXTINF:-1,Sin grupo\r\nhttps://a/x.m3u8\r\n' +
+    'https://suelta-sin-extinf.m3u8\r\n';
+  const c = leerM3U(m3u);
+  igual(c.length, 3);
+  igual([c[0].grupo, c[0].nombre, c[0].logo, c[0].urls], ['Generalistas', 'La 1', 'https://logo/1.png', ['https://a/la1.m3u8', 'https://b/la1.m3u8']]);
+  igual([c[1].grupo, c[1].nombre, c[1].urls], ['Informativos', '24h', ['https://a/24h.m3u8']]);
+  igual(c[2].grupo, 'Sin grupo');
+});
+
 correrPruebas();
 </script>
 </body>

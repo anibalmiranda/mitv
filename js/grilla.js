@@ -42,7 +42,7 @@ function render(reutilizar) {
   const anteriores = new Map();   // clave → cuadro de la vista anterior con reproductor
   if (reutilizar) celdas.forEach(c => {
     const k = clave(c.dataset.linea);
-    if (k && c.querySelector('iframe') && !anteriores.has(k)) anteriores.set(k, c);
+    if (k && c.querySelector(SEL_REPRODUCTOR) && !anteriores.has(k)) anteriores.set(k, c);
   });
   const reutilizadas = new Set();
   // Lo que no se puede reutilizar se quita ya; lo reutilizable espera a ver si la vista nueva lo usa (al final)
@@ -129,6 +129,11 @@ function render(reutilizar) {
 
       if (esCamara) {
         crearCamara(celda, item.id);
+      } else if (item.tipo === 'hls') {
+        // Canal de TV (tv.js): también espera su turno en la carga escalonada, mostrando su logo
+        celda.appendChild(crearTv(celda, item));
+        celda.classList.add('esperando');
+        if (celda.dataset.thumb) celda.style.backgroundImage = 'url("' + celda.dataset.thumb + '")';
       } else {
         // El reproductor no se carga todavía: espera su turno en la carga escalonada (abajo) mostrando la miniatura
         const ifr = document.createElement('iframe');
@@ -155,6 +160,7 @@ function render(reutilizar) {
       const memNombre = config.nombres[clave(linea)];
       fila.querySelector('.titulo').textContent = (memNombre && memNombre.titulo) || nombreInicial(item, idx);
       if (memNombre && memNombre.autor) fila.querySelector('.autor').textContent = memNombre.autor;
+      else if (item.tipo === 'hls' && infoTv(linea)) fila.querySelector('.autor').textContent = infoTv(linea).grupo || '';
       celda.appendChild(fila);
       // ¿La última vez era un directo? Si ahora no lo es, quizás el canal empezó otra transmisión (directos.js)
       if (item.tipo === 'video')
@@ -286,7 +292,7 @@ let colaCarga = [];
 let timerCarga = null;
 
 function celdasActivas() {
-  const videos = celdas.filter(c => c.querySelector('iframe') && !c._externo);
+  const videos = celdas.filter(c => c.querySelector(SEL_REPRODUCTOR) && !c._externo);
   // Ahorro por inactividad: solo el que suena y el que se está viendo ampliado
   if (enAhorro) return new Set(videos.filter(c => c.dataset.mute === '0' || c.dataset.pendiente ||
                                                   c.classList.contains('max') || (fundido && fundido.nueva === c)));
@@ -299,8 +305,8 @@ function celdasActivas() {
 }
 function actualizarCarga() {
   const activas = celdasActivas();
-  celdas.forEach(c => { if (c.querySelector('iframe') && !activas.has(c)) dormirCelda(c); });
-  const pendientes = celdas.filter(c => { const f = c.querySelector('iframe'); return f && f.dataset.src && activas.has(c); });
+  celdas.forEach(c => { if (c.querySelector(SEL_REPRODUCTOR) && !activas.has(c)) dormirCelda(c); });
+  const pendientes = celdas.filter(c => { const f = c.querySelector(SEL_REPRODUCTOR); return f && f.dataset.src && activas.has(c); });
   const prioridad = c => (c.dataset.pendiente || c.dataset.mute === '0') ? 0 : 1;
   colaCarga = pendientes.sort((a, b) => prioridad(a) - prioridad(b));   // sort estable: el resto queda en orden
   // Si ya venía cargando, se respeta el ritmo; si no, la primera tanda parte al tiro
@@ -319,10 +325,12 @@ function cargarTanda() {
   if (colaCarga.length) timerCarga = setTimeout(cargarTanda, INTERVALO_CARGA);
 }
 function cargarIframe(celda) {
-  const ifr = celda.querySelector('iframe');
+  const ifr = celda.querySelector(SEL_REPRODUCTOR);
   if (!ifr || !ifr.dataset.src || celda._externo) return;
-  ifr.src = ifr.dataset.src;
+  const src = ifr.dataset.src;
   delete ifr.dataset.src;
+  if (ifr.tagName === 'VIDEO') iniciarTv(celda, ifr, src);   // canal de TV
+  else ifr.src = src;
   celda.classList.remove('esperando', 'dormida');
   celda.style.backgroundImage = '';
 }
@@ -343,6 +351,7 @@ function olvidarReproductor(celda) {
 // Dirección para volver a cargar el cuadro: parte en un punto al azar si ya se sabe la duración
 function urlRecarga(celda) {
   const item = parsear(celda.dataset.linea);
+  if (item.tipo === 'hls') return item.id;   // canal de TV: su dirección tal cual
   const muteado = celda.dataset.mute === '1';
   if (item.tipo === 'video' && config.inicioAleatorio && !item.inicio) {
     const mem = config.duraciones[item.id];
@@ -354,18 +363,19 @@ function urlRecarga(celda) {
 function ponerMiniatura(celda) {
   let thumb = celda.dataset.thumb;
   // En los directos, la miniatura "_live" muestra un cuadro reciente de la transmisión (se pide de nuevo cada 5 min)
-  if (thumb && celda.classList.contains('en-vivo'))
+  if (thumb && celda.classList.contains('en-vivo') && thumb.includes('/mqdefault.jpg'))
     thumb = thumb.replace('/mqdefault.jpg', '/mqdefault_live.jpg') + '?t=' + Math.floor(Date.now() / 300000);
   celda.style.backgroundImage = thumb ? 'url("' + thumb + '")' : '';
 }
 function dormirCelda(celda) {
-  const ifr = celda.querySelector('iframe');
+  const ifr = celda.querySelector(SEL_REPRODUCTOR);
   if (!ifr || celda._externo) return;
   if (!ifr.dataset.src) {   // estaba cargado: se descarga
     detenerRampa(celda);
     olvidarReproductor(celda);
     ifr.dataset.src = urlRecarga(celda);
-    ifr.src = 'about:blank';
+    if (ifr.tagName === 'VIDEO') detenerTv(celda, ifr);   // canal de TV: se suelta su conexión
+    else ifr.src = 'about:blank';
   }
   celda.classList.add('esperando', 'dormida');
   ponerMiniatura(celda);

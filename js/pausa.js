@@ -23,7 +23,7 @@ function pausaOcultosActiva() {
 }
 function ventanaOculta() { return config.pausarOcultos && document.hidden; }
 function reanudarCelda(celda) {
-  const ifr = celda.querySelector('iframe');
+  const ifr = celda.querySelector(SEL_REPRODUCTOR);
   if (!ifr) return;
   if (celda.classList.contains('en-vivo')) comandoYT(ifr, 'seekTo', [1e9, true]);   // al borde del en vivo
   comandoYT(ifr, 'playVideo');
@@ -36,7 +36,7 @@ function aplicarPausaOcultos() {
   celdas.forEach(c => {
     const pausar = (activa && v && !v.has(c)) || (oculta && (c.dataset.mute !== '0' || fondoActivo));
     if (c.dataset.tipo === 'camara') { c._pausadaFS = !!pausar; return; }   // se corta o reconecta abajo
-    const ifr = c.querySelector('iframe');
+    const ifr = c.querySelector(SEL_REPRODUCTOR);
     if (!ifr) return;
     if (pausar && !c._pausadaFS) {
       if (c._rampa) { reintentar = true; return; }   // todavía bajando el audio: se pausa al terminar

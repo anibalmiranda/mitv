@@ -172,7 +172,7 @@ function cambiarDirecto(celda, d) {
 }
 function recargarCelda(celda, linea) {
   const item = parsear(linea);
-  const ifr = celda.querySelector('iframe');
+  const ifr = celda.querySelector(SEL_REPRODUCTOR);
   if (!item || !ifr) return;
   clearTimeout(celda._timerDirecto);
   celda.dataset.linea = linea;

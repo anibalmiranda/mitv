@@ -6,6 +6,8 @@ const CLAVE = 'multiyoutube.config.v1';
 const MAX_FAV = 9;
 const VALOR_FAV = '__favoritos__';
 const $ = id => document.getElementById(id);
+// El reproductor de un cuadro: un iframe de YouTube o un <video> de un canal de TV por HLS (tv.js)
+const SEL_REPRODUCTOR = 'iframe, video.tv';
 const contenedor = $('contenedor');
 const vacio = $('vacio');
 const fondo = $('fondo');
@@ -45,6 +47,7 @@ let config = {
   nombres: {},           // memoria de nombres { claveLinea: { titulo, autor, vivo, canal, directo, t } } para buscar parecidos
   handles: {},           // @handle (o c/nombre, user/nombre) → ID del canal (UC…), averiguado por servidor.py
   volumenes: {},         // volumen propio de cada video { claveLinea: 5..100 } (los que no están van a 100)
+  tv: {},                // canales de TV importados de listas M3U { claveLinea: { nombre, grupo, logo, respaldos, proxy } }
   maxActivos: 0,         // modo liviano: máximo de videos en movimiento (0 = todos)
   ahorroMin: 10,         // minutos sin actividad para dejar solo el video que suena (0 = nunca)
   guardado: 0            // cuándo se guardó por última vez: decide qué copia es la más nueva (navegador o archivo)
@@ -83,6 +86,7 @@ function normalizarConfig() {
   if (!config.nombres || typeof config.nombres !== 'object') config.nombres = {};
   if (!config.handles || typeof config.handles !== 'object') config.handles = {};
   if (!config.volumenes || typeof config.volumenes !== 'object') config.volumenes = {};
+  if (!config.tv || typeof config.tv !== 'object') config.tv = {};
   if (typeof config.superFav !== 'string') config.superFav = '';
   if (typeof config.fondoAudio !== 'string') config.fondoAudio = '';
   if (!config.cuentaAtras || typeof config.cuentaAtras !== 'object') config.cuentaAtras = Object.assign({}, CONFIG_INICIAL.cuentaAtras);

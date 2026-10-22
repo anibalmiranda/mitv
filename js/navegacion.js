@@ -7,7 +7,7 @@
 // Modo solo audio: le pasa el audio a esa fila.
 // Las cámaras entran en la navegación solo cuando se ven videos (en solo audio no tienen nada que aportar)
 function validas() {
-  return celdas.filter(c => c.querySelector('iframe') || (c.dataset.tipo === 'camara' && !config.modoAudio));
+  return celdas.filter(c => c.querySelector(SEL_REPRODUCTOR) || (c.dataset.tipo === 'camara' && !config.modoAudio));
 }
 function indiceActual(lista) {
   // Durante un fundido de imagen, el "actual" es el que está entrando

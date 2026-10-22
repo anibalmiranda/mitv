@@ -3,17 +3,28 @@
 // Los archivos se cargan en orden desde index.html y comparten variables (scripts clásicos).
 
 // ---------- Listas guardadas ----------
+// Las listas "Grupo / Sub" (p. ej. las importadas de una lista M3U: "TV / Generalistas") se muestran agrupadas
+// bajo "Grupo" en el selector. El conteo es de líneas que se pueden ver (sin comentarios ni URLs mal escritas).
 function pintarSelector() {
   selLista.innerHTML = '';
   const of = document.createElement('option');
   of.value = VALOR_FAV;
   of.textContent = '★ Favoritos (' + cantFavs() + '/' + MAX_FAV + ')';
   selLista.appendChild(of);
+  const grupos = new Map();
   Object.keys(config.listas).forEach(n => {
     const o = document.createElement('option');
     o.value = n;
-    o.textContent = n + ' (' + config.listas[n].filter(l => parsear(l)).length + ')';
-    selLista.appendChild(o);
+    const corte = n.indexOf(' / ');
+    const visibles = config.listas[n].filter(l => { const p = parsear(l); return p && p.tipo !== 'error'; }).length;
+    o.textContent = (corte > 0 ? n.slice(corte + 3) : n) + ' (' + visibles + ')';
+    if (corte > 0) {
+      const g = n.slice(0, corte);
+      if (!grupos.has(g)) { const og = document.createElement('optgroup'); og.label = g; grupos.set(g, og); selLista.appendChild(og); }
+      grupos.get(g).appendChild(o);
+    } else {
+      selLista.appendChild(o);
+    }
   });
   selLista.value = config.vistaFav ? VALOR_FAV : config.actual;
 }

@@ -45,7 +45,7 @@ function mostrarSuperFav() {
   btnSuperFav.title = (visible ? 'Ocultar el super favorito' : 'Mostrar el super favorito en la esquina') + ' (S)';
   if (!visible) { ventanaSuper.classList.remove('visible'); vaciarSuperFav(); return; }
   // Si ya muestra este mismo video, no se recarga
-  if (ventanaSuper.dataset.linea === config.superFav && ventanaSuper.querySelector('iframe, img')) {
+  if (ventanaSuper.dataset.linea === config.superFav && ventanaSuper.querySelector('iframe, img, video')) {
     ventanaSuper.classList.add('visible');
     return;
   }
@@ -58,6 +58,8 @@ function mostrarSuperFav() {
     medio = document.createElement('img');
     medio.referrerPolicy = 'no-referrer';
     medio.src = item.id;
+  } else if (item.tipo === 'hls') {
+    medio = videoTvSuelto(item.id, true);   // canal de TV, siempre silenciado
   } else {
     // Video normal con duración conocida: parte en un punto al azar, como en la grilla
     if (item.tipo === 'video' && config.inicioAleatorio && !item.inicio) {
@@ -74,7 +76,7 @@ function mostrarSuperFav() {
   ventanaSuper.classList.add('visible');
 }
 function vaciarSuperFav() {
-  ventanaSuper.querySelectorAll('iframe, img').forEach(m => m.remove());
+  ventanaSuper.querySelectorAll('iframe, img, video').forEach(m => { if (m._hls) m._hls.destroy(); m.remove(); });
   delete ventanaSuper.dataset.linea;
 }
 function alternarVentanaSuperFav() {
@@ -94,6 +96,6 @@ btnSuperFav.addEventListener('click', alternarVentanaSuperFav);
 $('cerrarSuperFav').addEventListener('click', e => { e.stopPropagation(); if (config.superFavVisible) alternarVentanaSuperFav(); });
 // Con la ventana minimizada o en otra pestaña, se pausa; al volver, sigue
 document.addEventListener('visibilitychange', () => {
-  const f = ventanaSuper.querySelector('iframe');
+  const f = ventanaSuper.querySelector('iframe, video');
   if (f) comandoYT(f, document.hidden ? 'pauseVideo' : 'playVideo');
 });

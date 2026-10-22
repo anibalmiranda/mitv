@@ -78,7 +78,7 @@ function reintentarAqui(celda) {
   clearTimeout(celda._timerExterno);
   const av = celda.querySelector('.aviso-externo');
   if (av) av.remove();
-  const ifr = celda.querySelector('iframe');
+  const ifr = celda.querySelector(SEL_REPRODUCTOR);
   if (!ifr) return;
   olvidarReproductor(celda);
   ifr.dataset.src = urlRecarga(celda);

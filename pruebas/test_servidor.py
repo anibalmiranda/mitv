@@ -196,6 +196,72 @@ class API(unittest.TestCase):
         self.assertEqual(r.getheader('Cache-Control'), 'no-cache')
 
 
+class CanalesHLS(unittest.TestCase):
+    """Un servidor HLS falso en un puerto libre simula cada caso (sin internet)."""
+
+    RUTAS = {
+        '/ok/maestra.m3u8': (200, '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\ncalidad.m3u8\n'),
+        '/ok/calidad.m3u8': (200, '#EXTM3U\n#EXTINF:6,\nviejo.ts\n#EXTINF:6,\nnuevo.ts\n'),
+        '/ok/nuevo.ts': (200, 'x' * 100),
+        '/ok/viejo.ts': (403, ''),                       # DVR: el fragmento antiguo bloqueado no importa
+        '/geo/maestra.m3u8': (200, '#EXTM3U\n#EXTINF:6,\nseg.ts\n'),
+        '/geo/seg.ts': (403, ''),                        # la lista sí, el video no (como los "GEO")
+        '/drm/maestra.m3u8': (200, '#EXTM3U\n#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://x",KEYFORMAT="com.apple.streamingkeydelivery"\n#EXTINF:6,\nseg.ts\n'),
+        '/html/maestra.m3u8': (200, '<html>no soy una lista</html>'),
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        from http.server import BaseHTTPRequestHandler
+        rutas = cls.RUTAS
+
+        class Falso(BaseHTTPRequestHandler):
+            def do_GET(self):
+                codigo, cuerpo = rutas.get(self.path, (404, ''))
+                self.send_response(codigo)
+                if self.path.startswith('/ok/'):
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(cuerpo.encode())
+
+            def log_message(self, *a):
+                pass
+
+        cls.falso = ThreadingHTTPServer(('127.0.0.1', 0), Falso)
+        cls.base = 'http://127.0.0.1:%d' % cls.falso.server_address[1]
+        threading.Thread(target=cls.falso.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.falso.shutdown()
+        cls.falso.server_close()
+
+    def test_canal_que_funciona_y_con_permiso_directo(self):
+        self.assertEqual(servidor.revisar_hls(self.base + '/ok/maestra.m3u8'), {'estado': 'ok', 'cors': True})
+
+    def test_bloqueado_aunque_la_lista_responda(self):
+        r = servidor.revisar_hls(self.base + '/geo/maestra.m3u8')
+        self.assertEqual(r['estado'], 'bloqueado')
+
+    def test_cifrado_drm(self):
+        self.assertEqual(servidor.revisar_hls(self.base + '/drm/maestra.m3u8')['estado'], 'drm')
+
+    def test_no_existe_y_no_es_lista(self):
+        self.assertEqual(servidor.revisar_hls(self.base + '/nada.m3u8')['estado'], 'noexiste')
+        self.assertEqual(servidor.revisar_hls(self.base + '/html/maestra.m3u8')['estado'], 'noexiste')
+
+    def test_marcadores_de_publicidad(self):
+        self.assertEqual(servidor.revisar_hls('https://x.tv/p.m3u8?did=[DEVICE_ID]')['estado'], 'publicidad')
+
+    def test_reescribir_lista_para_el_intermediario(self):
+        lista = '#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="clave.key"\n#EXTINF:6,\nseg1.ts\nhttps://otro.tv/seg2.ts\n'
+        r = servidor.reescribir_lista_hls(lista, 'https://canal.tv/vivo/lista.m3u8')
+        self.assertIn('URI="/api/hls?url=https%3A%2F%2Fcanal.tv%2Fvivo%2Fclave.key"', r)
+        self.assertIn('/api/hls?url=https%3A%2F%2Fcanal.tv%2Fvivo%2Fseg1.ts', r)
+        self.assertIn('/api/hls?url=https%3A%2F%2Fotro.tv%2Fseg2.ts', r)
+        self.assertIn('#EXTINF:6,', r)
+
+
 @unittest.skipUnless(CON_INTERNET, 'solo con --internet')
 class YouTubeDeVerdad(unittest.TestCase):
     def test_canario(self):

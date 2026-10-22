@@ -39,6 +39,8 @@ function parsear(linea) {
     if (partes[0] && partes[0].startsWith('@')) return canalPorRuta(partes[0], s);
     if (['c', 'user'].includes(partes[0]) && partes[1]) return canalPorRuta(partes[0] + '/' + partes[1], s);
   }
+  // Canal de TV por HLS: la dirección termina en .m3u8 (puede traer parámetros)
+  if (/^https?:\/\//i.test(s) && /\.m3u8($|[?#])/i.test(u.pathname + u.search)) return { tipo: 'hls', id: s };
   // Cualquier otra dirección http(s):// escrita completa se toma como cámara IP (stream MJPEG o imagen)
   if (/^https?:\/\//i.test(s)) return { tipo: 'camara', id: s };
   return { tipo: 'error', original: s, motivo: 'Solo se aceptan URLs de YouTube o de cámaras (http://…)' };
@@ -114,10 +116,42 @@ function urlEmbed(item, muteado, autoplay) {
 }
 
 function nombreInicial(item, idx) {
+  if (item.tipo === 'hls') {
+    const t = config.tv[item.tipo + ':' + item.id];
+    if (t && t.nombre) return t.nombre;
+    try { return 'Canal de TV ' + new URL(item.id).host; } catch (e) { return 'Canal de TV'; }
+  }
   if (item.tipo === 'camara') {
     try { return 'Cámara ' + new URL(item.id).host; } catch (e) { return 'Cámara'; }
   }
   if (item.tipo === 'canal') return 'Canal en vivo ' + (item.ruta || item.id);
   if (item.tipo === 'lista') return 'Lista ' + item.id;
   return 'Video ' + (idx + 1) + ' (' + item.id + ')';
+}
+
+// ---------- Listas de canales M3U (como tv.m3u8 de TDTChannels) ----------
+// Devuelve [{ grupo, nombre, logo, id, urls: [principal, respaldos...] }]: las entradas del mismo canal (mismo
+// tvg-id o nombre, dentro del mismo grupo) se juntan en una, con sus direcciones en orden.
+function leerM3U(texto) {
+  const canales = [], porClave = new Map();
+  let ext = null;
+  String(texto).split(/\r?\n/).forEach(bruta => {
+    const l = bruta.trim();
+    if (l.startsWith('#EXTINF')) {
+      const atr = n => { const m = l.match(new RegExp(n + '="([^"]*)"')); return m ? m[1] : ''; };
+      const coma = l.lastIndexOf(',');
+      ext = { grupo: atr('group-title') || 'Sin grupo', nombre: (coma >= 0 ? l.slice(coma + 1) : '').trim() || atr('tvg-name') || 'Canal',
+              logo: atr('tvg-logo'), id: atr('tvg-id') };
+      return;
+    }
+    if (!l || l.startsWith('#') || !ext) return;
+    if (/^https?:\/\//i.test(l)) {
+      const k = ext.grupo + '|' + (ext.id || ext.nombre).toLowerCase();
+      let c = porClave.get(k);
+      if (!c) { c = Object.assign({ urls: [] }, ext); porClave.set(k, c); canales.push(c); }
+      if (!c.urls.includes(l)) c.urls.push(l);
+    }
+    ext = null;
+  });
+  return canales;
 }

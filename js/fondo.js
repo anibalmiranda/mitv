@@ -71,14 +71,14 @@ function aplicarFondo() {
     fondoSilenciado = false;
     crearReproductorFondo();
     // Silencia la grilla (el elegido sigue marcado para navegar y para volver)
-    contenedor.querySelectorAll('iframe').forEach(f => comandoYT(f, 'mute'));
+    contenedor.querySelectorAll(SEL_REPRODUCTOR).forEach(f => comandoYT(f, 'mute'));
   } else {
     vaciarFondo();
     if (antes) {
       // Vuelve el audio normal en el video que tenía el audio
       const c = celdas.find(x => x.dataset.mute === '0' && puedeSonar(x));
       if (c) {
-        const f = c.querySelector('iframe');
+        const f = c.querySelector(SEL_REPRODUCTOR);
         comandoYT(f, 'unMute');
         comandoYT(f, 'setVolume', [volumenDe(c)]);
         comandoYT(f, 'playVideo');
@@ -92,14 +92,21 @@ function aplicarFondo() {
 
 // ---------- Reproductor oculto ----------
 function crearReproductorFondo() {
-  if (cajaFondo.dataset.linea === config.fondoAudio && cajaFondo.querySelector('iframe')) {
-    const f = cajaFondo.querySelector('iframe');
+  if (cajaFondo.dataset.linea === config.fondoAudio && cajaFondo.querySelector('iframe, video')) {
+    const f = cajaFondo.querySelector('iframe, video');
     comandoYT(f, 'unMute'); comandoYT(f, 'setVolume', [volumenFondo()]); comandoYT(f, 'playVideo');
     return;
   }
   vaciarFondo();
   const item = parsear(config.fondoAudio);
   if (!item || item.tipo === 'error' || item.tipo === 'camara') return;
+  if (item.tipo === 'hls') {   // canal de TV o radio por HLS (tv.js)
+    const v = videoTvSuelto(item.id, !huboGesto || fondoSilenciado);
+    v.volume = volumenFondo() / 100;
+    cajaFondo.dataset.linea = config.fondoAudio;
+    cajaFondo.appendChild(v);
+    return;
+  }
   if (item.tipo === 'video' && config.inicioAleatorio && !item.inicio) {
     const mem = config.duraciones[item.id];
     if (mem && !mem.vivo) item.inicioAzar = segundoAleatorio(mem.d);
@@ -121,19 +128,19 @@ function crearReproductorFondo() {
   cajaFondo.appendChild(f);
 }
 function vaciarFondo() {
-  cajaFondo.querySelectorAll('iframe').forEach(f => f.remove());
+  cajaFondo.querySelectorAll('iframe, video').forEach(f => { if (f._hls) f._hls.destroy(); f.remove(); });
   delete cajaFondo.dataset.linea;
 }
 // Al abrir la página con el audio de fondo activo, el navegador no deja sonar hasta el primer clic o tecla
 ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => {
-  const f = cajaFondo.querySelector('iframe');
+  const f = cajaFondo.querySelector('iframe, video');
   if (!fondoActivo || fondoSilenciado || !f) return;
   comandoYT(f, 'unMute'); comandoYT(f, 'setVolume', [volumenFondo()]); comandoYT(f, 'playVideo');
 }, { capture: true, once: true }));
 
 // ---------- M / ⏯ y + / − con el audio de fondo activo ----------
 function alternarSilencioFondo() {
-  const f = cajaFondo.querySelector('iframe');
+  const f = cajaFondo.querySelector('iframe, video');
   fondoSilenciado = !fondoSilenciado;
   if (f) comandoYT(f, fondoSilenciado ? 'mute' : 'unMute');
   if (f && !fondoSilenciado) comandoYT(f, 'setVolume', [volumenFondo()]);
@@ -144,7 +151,7 @@ function cambiarVolumenFondo(paso) {
   const v = Math.min(100, Math.max(VOLUMEN_MIN, Math.round((volumenFondo() + paso) / 5) * 5));
   if (v === 100) delete config.volumenes[k]; else config.volumenes[k] = v;
   guardar();
-  const f = cajaFondo.querySelector('iframe');
+  const f = cajaFondo.querySelector('iframe, video');
   if (f && !fondoSilenciado) comandoYT(f, 'setVolume', [v]);
   mostrarMensaje('🎵 Volumen del audio de fondo: ' + v + '%');
 }

@@ -93,7 +93,7 @@ function importarReemplazar() {
   const c = respaldoPendiente;
   if (!c) return;
   const base = JSON.parse(JSON.stringify(config));
-  ['listas', 'favoritos', 'ultimos', 'duraciones', 'nombres', 'handles', 'volumenes'].forEach(k => { base[k] = Array.isArray(base[k]) ? [] : {}; });
+  ['listas', 'favoritos', 'ultimos', 'duraciones', 'nombres', 'handles', 'volumenes', 'tv'].forEach(k => { base[k] = Array.isArray(base[k]) ? [] : {}; });
   config = Object.assign(base, c);
   if (!config.listas[config.actual]) config.actual = Object.keys(config.listas)[0];
   if (cantFavs() > MAX_FAV) config.favoritos = config.favoritos.filter(f => clave(f)).slice(0, MAX_FAV);
@@ -124,7 +124,7 @@ function importarAgregar() {
     config.favoritos.push(f);
     favsNuevos++;
   });
-  ['duraciones', 'nombres', 'handles', 'volumenes'].forEach(k => {
+  ['duraciones', 'nombres', 'handles', 'volumenes', 'tv'].forEach(k => {
     if (!c[k] || typeof c[k] !== 'object') return;
     Object.keys(c[k]).forEach(id => { if (!config[k][id]) config[k][id] = c[k][id]; });
   });

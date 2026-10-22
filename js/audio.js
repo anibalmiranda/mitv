@@ -18,7 +18,7 @@ function detenerRampa(celda) {
   if (celda._rampa) { clearInterval(celda._rampa); celda._rampa = null; }
 }
 function rampa(celda, desde, hasta, ms, alTerminar) {
-  const ifr = celda.querySelector('iframe');
+  const ifr = celda.querySelector(SEL_REPRODUCTOR);
   detenerRampa(celda);
   const pasos = Math.max(1, Math.round(ms / 100));
   let i = 0;
@@ -38,7 +38,7 @@ function rampa(celda, desde, hasta, ms, alTerminar) {
 
 // fadeMs > 0: el que se silencia baja de a poco y el que entra sube de a poco
 function fijarAudio(celda, silenciar, fadeMs) {
-  const ifr = celda.querySelector('iframe');
+  const ifr = celda.querySelector(SEL_REPRODUCTOR);
   if (!ifr) return;
   fadeMs = fadeMs || 0;
   if (silenciar) {
@@ -84,7 +84,7 @@ function fijarAudio(celda, silenciar, fadeMs) {
   pintarAudio(celda);
 }
 // Los que pueden recibir el audio: con reproductor y no bloqueados por su dueño (externos.js)
-function puedeSonar(celda) { return !!celda.querySelector('iframe') && !celda._externo; }
+function puedeSonar(celda) { return !!celda.querySelector(SEL_REPRODUCTOR) && !celda._externo; }
 function alternarAudio(celda) {
   if (!puedeSonar(celda)) {   // cámara o video bloqueado fuera de YouTube: el que sonaba sigue sonando
     if (celda._externo) mostrarMensaje('🔒 Este video solo se puede ver en YouTube: usa "▶ Ver en YouTube"');
@@ -118,7 +118,7 @@ function fijarVolumen(celda, v, avisar) {
   guardar();
   // Si está sonando (y no en pleno fundido), se aplica al tiro
   if (celda.dataset.mute === '0' && !celda._rampa) {
-    comandoYT(celda.querySelector('iframe'), 'setVolume', [v]);
+    comandoYT(celda.querySelector(SEL_REPRODUCTOR), 'setVolume', [v]);
     celda._vol = v;
   }
   const barra = celda.querySelector('.volumen');
@@ -148,7 +148,7 @@ function aplicarModoAudio(cambio) {
 
   if (cambio) {
     celdas.forEach(c => {
-      const ifr = c.querySelector('iframe');
+      const ifr = c.querySelector(SEL_REPRODUCTOR);
       if (!ifr) return;
       if (config.modoAudio) {
         // Solo sigue reproduciendo el que tiene audio
