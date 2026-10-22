@@ -33,8 +33,8 @@ function navegarMultimedia(dir) {
     navegar(dir);
     return;
   }
-  // En la grilla: solo pasa el audio (sin ampliar). Las cámaras no tienen audio: se saltan.
-  const lista = celdas.filter(c => c.querySelector('iframe'));
+  // En la grilla: solo pasa el audio (sin ampliar). Las cámaras y los bloqueados se saltan.
+  const lista = celdas.filter(puedeSonar);
   if (!lista.length) return;
   const i = lista.findIndex(c => c.dataset.mute === '0');
   const n = lista.length;

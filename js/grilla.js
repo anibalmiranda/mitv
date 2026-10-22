@@ -66,8 +66,9 @@ function render() {
       // Si hay que retomar el último seleccionado, todos parten silenciados y ese recibe el audio después
       // Las cámaras no tienen audio: siempre "silenciadas" y nunca le quitan el audio a un video
       const esCamara = item.tipo === 'camara';
-      const esUlt = !esCamara && hayUlt && !pendiente && clave(linea) === ult.clave;
-      const muteado = esCamara || hayUlt || config.mute || yaHayAudio;
+      const esExterno = !esCamara && esExternoConocido(linea);   // bloqueado por su dueño: no puede sonar aquí
+      const esUlt = !esCamara && !esExterno && hayUlt && !pendiente && clave(linea) === ult.clave;
+      const muteado = esCamara || esExterno || hayUlt || config.mute || yaHayAudio;
       if (!muteado) yaHayAudio = true;
       celda.dataset.mute = muteado ? '1' : '0';
       celda.dataset.tipo = item.tipo;
@@ -189,6 +190,7 @@ function render() {
 
       pintarFav(celda);
       pintarAudio(celda);
+      if (esExterno) marcarExterno(celda);
       idx++;
     }
 
@@ -228,7 +230,7 @@ let colaCarga = [];
 let timerCarga = null;
 
 function celdasActivas() {
-  const videos = celdas.filter(c => c.querySelector('iframe'));
+  const videos = celdas.filter(c => c.querySelector('iframe') && !c._externo);
   // Ahorro por inactividad: solo el que suena y el que se está viendo ampliado
   if (enAhorro) return new Set(videos.filter(c => c.dataset.mute === '0' || c.dataset.pendiente ||
                                                   c.classList.contains('max') || (fundido && fundido.nueva === c)));
@@ -262,7 +264,7 @@ function cargarTanda() {
 }
 function cargarIframe(celda) {
   const ifr = celda.querySelector('iframe');
-  if (!ifr || !ifr.dataset.src) return;
+  if (!ifr || !ifr.dataset.src || celda._externo) return;
   ifr.src = ifr.dataset.src;
   delete ifr.dataset.src;
   celda.classList.remove('esperando', 'dormida');
@@ -302,7 +304,7 @@ function ponerMiniatura(celda) {
 }
 function dormirCelda(celda) {
   const ifr = celda.querySelector('iframe');
-  if (!ifr) return;
+  if (!ifr || celda._externo) return;
   if (!ifr.dataset.src) {   // estaba cargado: se descarga
     detenerRampa(celda);
     olvidarReproductor(celda);

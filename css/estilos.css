@@ -410,3 +410,23 @@ body.modo-audio .celda .volumen { bottom: auto; top: 50%; transform: translateY(
 
 /* Modo liviano: cuadro dormido (muestra su miniatura hasta que se despierta) */
 .celda.dormida::after { content: '💤 en pausa · deja el mouse encima para verlo'; }
+
+/* Video bloqueado fuera de YouTube (101/150): imagen en vivo de YouTube + botón para verlo allá */
+.celda .aviso-externo {
+  position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px; padding: 14px; text-align: center;
+  background: linear-gradient(rgba(10,10,12,.35), rgba(10,10,12,.85)), var(--miniatura, none) center / cover no-repeat, #0a0a0c;
+  color: #ddd; font-size: 13px; cursor: pointer;
+}
+.celda .aviso-externo .nombre { color: #fff; font-size: 14px; font-weight: 600; text-shadow: 0 1px 3px #000; }
+.celda .aviso-externo .motivo { color: #cfcfd4; font-size: 12px; text-shadow: 0 1px 3px #000; }
+.celda .aviso-externo .ver {
+  border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px; font-weight: 600;
+  background: var(--acento); color: #fff;
+}
+.celda .aviso-externo .acciones { font-size: 11px; color: #aaa; }
+.celda .aviso-externo .acciones a { color: #9fd0ff; }
+.celda .aviso-externo .etq-vivo { display: none; }
+.celda.externo.en-vivo .aviso-externo .etq-vivo { display: inline-flex; }
+.celda.externo .volumen, .celda.externo .icono-audio, .celda.externo > .etq-vivo { display: none; }
+body.modo-audio .celda .aviso-externo { display: none; }

@@ -21,6 +21,8 @@ const ERRORES_YT = {
 // ---------- Cuadro caído ----------
 // texto (opcional): motivo concreto en vez del genérico del código (p. ej. lo que respondió la cámara)
 function marcarCaido(celda, codigo, texto) {
+  // 101 / 150: el video existe, pero su dueño no deja verlo fuera de YouTube (externos.js)
+  if (codigo === 101 || codigo === 150) { marcarExterno(celda); return; }
   celda.classList.add('caido');
   const motivo = texto || ERRORES_YT[codigo] || ('error ' + codigo);
   let av = celda.querySelector('.aviso-caido');

@@ -186,7 +186,7 @@ function reiniciarVideo(celda) {
 }
 function videoTerminado(celda) {
   if (!config.alTerminarSiguiente) return;
-  const lista = validas();
+  const lista = celdas.filter(c => c === celda || puedeSonar(c));   // se saltan cámaras y bloqueados
   const tieneAudio = celda.dataset.mute === '0';
   if (tieneAudio && lista.length > 1) {
     const sig = lista[(lista.indexOf(celda) + 1) % lista.length];

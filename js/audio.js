@@ -82,8 +82,13 @@ function fijarAudio(celda, silenciar, fadeMs) {
   }
   pintarAudio(celda);
 }
+// Los que pueden recibir el audio: con reproductor y no bloqueados por su dueño (externos.js)
+function puedeSonar(celda) { return !!celda.querySelector('iframe') && !celda._externo; }
 function alternarAudio(celda) {
-  if (celda.dataset.tipo === 'camara') return;   // sin audio: el que sonaba sigue sonando
+  if (!puedeSonar(celda)) {   // cámara o video bloqueado fuera de YouTube: el que sonaba sigue sonando
+    if (celda._externo) mostrarMensaje('🔒 Este video solo se puede ver en YouTube: usa "▶ Ver en YouTube"');
+    return;
+  }
   if (celda.dataset.mute === '1') {
     const ms = Math.max(0, Number(config.fade) || 0) * 1000;
     // El fundido se aplica solo al pasar el audio de un video a otro
