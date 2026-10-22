@@ -30,11 +30,24 @@ function ajustarGrilla() {
 }
 
 // ---------- Render ----------
-function render() {
+// reutilizar = true (al cambiar de lista o de vista, reemplazar o agregar una URL): los videos que ya estaban en
+// pantalla se conservan con su reproductor andando, sin recargarse. Los cuadros se ordenan con CSS (order),
+// así que un cuadro reutilizado nunca se mueve en la página (moverlo recargaría su reproductor).
+// Sin reutilizar (cambiaron ajustes que van en la dirección del reproductor, o se importaron datos), todo se crea de nuevo.
+function render(reutilizar) {
   cerrarTira();
   olvidarSilencioGeneral();   // las celdas se vuelven a crear
   if (carrusel && carrusel.vista !== vistaId()) detenerCarrusel();   // el carrusel es de la vista en que partió
-  contenedor.innerHTML = '';
+  terminarFundidoImagen();
+  const anteriores = new Map();   // clave → cuadro de la vista anterior con reproductor
+  if (reutilizar) celdas.forEach(c => {
+    const k = clave(c.dataset.linea);
+    if (k && c.querySelector('iframe') && !anteriores.has(k)) anteriores.set(k, c);
+  });
+  const reutilizadas = new Set();
+  // Lo que no se puede reutilizar se quita ya; lo reutilizable espera a ver si la vista nueva lo usa (al final)
+  const candidatas = new Set(anteriores.values());
+  [...contenedor.children].forEach(c => { if (!candidatas.has(c)) c.remove(); });
   celdas = [];
   comentarios = [];
 
@@ -53,6 +66,30 @@ function render() {
   fuente().forEach(linea => {
     const item = parsear(linea);
     if (!item) { if (linea.trim()) comentarios.push(linea); return; }
+
+    // ¿Ya estaba en pantalla? Se conserva tal cual (sigue reproduciendo) y solo se ajusta a esta vista
+    const previa = item.tipo !== 'error' && anteriores.get(clave(linea));
+    if (previa && !reutilizadas.has(previa)) {
+      reutilizadas.add(previa);
+      const esUlt = !previa._externo && hayUlt && !pendiente && clave(linea) === ult.clave;
+      const muteado = previa._externo || hayUlt || config.mute || yaHayAudio;
+      if (esUlt) { previa.dataset.pendiente = '1'; pendiente = previa; }
+      else if (muteado && previa.dataset.mute === '0') fijarAudio(previa, true);
+      else if (!muteado && previa.dataset.mute === '1') fijarAudio(previa, false);
+      if (!muteado || (esUlt && previa.dataset.mute === '0')) yaHayAudio = true;
+      previa.dataset.linea = linea;
+      previa.classList.remove('max', 'entrando');
+      const bMax = previa.querySelector('.maximizar');
+      if (bMax) bMax.textContent = '⤢';
+      const bQuitar = previa.querySelector('.quitar');
+      if (bQuitar) bQuitar.title = config.vistaFav ? 'Quitar de favoritos' : 'Quitar';
+      pintarFav(previa);
+      pintarAudio(previa);
+      previa.style.order = celdas.length;
+      celdas.push(previa);
+      idx++;
+      return;
+    }
 
     const celda = document.createElement('div');
     celda.className = 'celda';
@@ -206,6 +243,7 @@ function render() {
     celdas.push(celda);
     contenedor.appendChild(celda);
   });
+  anteriores.forEach(c => { if (!reutilizadas.has(c)) c.remove(); });   // estaban, pero no en esta vista
   actualizarCarga();
   aplicarModoAudio(false);
   pintarFavsBoton();

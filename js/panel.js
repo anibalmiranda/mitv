@@ -25,7 +25,7 @@ selLista.addEventListener('change', () => {
     config.actual = selLista.value;
   }
   guardar();
-  render();
+  render(true);
   pintarSelector();
   selLista.blur();
 });
@@ -97,7 +97,7 @@ btnEliminar.addEventListener('click', () => {
   delete config.ultimos['lista:' + config.actual];
   config.actual = Object.keys(config.listas)[0];
   guardar();
-  render();
+  render(true);
   pintarSelector();
   cerrarPanel();
 });
@@ -110,6 +110,8 @@ function huellaRender() {
 function guardarPanel() {
   const lineas = txt.value.split(/\r?\n/).map(l => l.trim()).filter(l => l.length);
   const huellaAntes = huellaRender();
+  const ajustesReproductor = () => JSON.stringify([config.autoplay, config.mute, config.inicioAleatorio]);
+  const ajustesAntes = ajustesReproductor();
 
   if (config.vistaFav) {
     // Favoritos: máximo 9 y sin repetidos
@@ -159,7 +161,8 @@ function guardarPanel() {
   }
   guardar();
   // Si solo cambiaron ajustes que se leen al vuelo (fundidos, carrusel, protector, modo liviano...), los videos siguen sin recargarse
-  if (huellaRender() !== huellaAntes) render();
+  // (y si cambió la lista pero no los ajustes del reproductor, los videos que siguen en ella no se recargan)
+  if (huellaRender() !== huellaAntes) render(ajustesReproductor() === ajustesAntes);
   else { programarPausaOcultos(); reiniciarCarrusel(); pintarCarrusel(); actualizarCarga(); }
   pintarSelector();
 

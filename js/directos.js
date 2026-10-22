@@ -63,7 +63,7 @@ async function resolverRuta(ruta) {
 let timerRender = null;
 function programarRender() {
   clearTimeout(timerRender);
-  timerRender = setTimeout(() => { render(); pintarSelector(); }, 300);
+  timerRender = setTimeout(() => { render(true); pintarSelector(); }, 300);
 }
 // Actualiza el texto de los cuadros con error sin recargar los videos
 function repintarErrores() {

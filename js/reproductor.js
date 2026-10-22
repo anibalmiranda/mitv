@@ -137,7 +137,7 @@ function prepararRetomar(celda, ult) {
   if (ult.max && !config.modoAudio) alternarMax(celda);
   if (huboGesto) {        // p. ej. al cambiar de lista: retoma directo, sin aviso
     delete celda.dataset.pendiente;
-    alternarAudio(celda);
+    if (celda.dataset.mute === '1') alternarAudio(celda);   // reutilizado al cambiar de lista: quizás ya suena
     return;
   }
   celdaPendiente = celda;

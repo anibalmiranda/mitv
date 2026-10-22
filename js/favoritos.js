@@ -38,6 +38,6 @@ function alternarFav(celda) {
 btnFavs.addEventListener('click', () => {
   config.vistaFav = !config.vistaFav;
   guardar();
-  render();
+  render(true);
   pintarSelector();
 });

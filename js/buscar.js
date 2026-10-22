@@ -167,7 +167,7 @@ function reemplazarUrl() {
   fijarFuente(celdas.map(c => c === celdaBuscar ? nueva : c.dataset.linea).concat(comentarios));
   guardar();
   cerrarBuscar();
-  render();
+  render(true);
   pintarSelector();
   mostrarMensaje('🔁 URL reemplazada' + (cambios > 1 ? ' en ' + cambios + ' lugares (listas y favoritos)' : ''));
 }
@@ -190,7 +190,7 @@ function agregarUrl() {
   guardar();
   const destino = config.vistaFav ? 'favoritos' : 'la lista "' + config.actual + '"';
   cerrarBuscar();
-  render();
+  render(true);
   pintarSelector();
   mostrarMensaje('➕ Agregado a ' + destino + ', justo después del original');
 }

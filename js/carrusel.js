@@ -55,7 +55,7 @@ function iniciarCarrusel() {
   if (config.vistaFav) {
     config.vistaFav = false;
     guardar();
-    render();
+    render(true);
     pintarSelector();
   }
   const lista = validas();
