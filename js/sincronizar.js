@@ -84,7 +84,8 @@ async function buscarDatosEnDireccionAntigua() {
   try { await fetch(URL_ANTIGUA + 'index.html', { mode: 'no-cors', cache: 'no-store' }); }
   catch (e) { return false; }
   mostrarMensaje('🔎 Buscando tus listas en la dirección antigua…');
-  location.replace(URL_ANTIGUA);
+  // Con una dirección única, para que el navegador no use una copia vieja de esa página (sin la mudanza)
+  location.replace(URL_ANTIGUA + '?mudanza=' + Date.now());
   return true;
 }
 
