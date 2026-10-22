@@ -29,6 +29,18 @@ El repositorio `anibalmiranda/mitv` es público: GitHub Pages lo puede publicar 
   exclusivo, volumen, modo liviano, super favorito, audio de fondo, panel de estado) y probando la dirección de
   respaldo si un canal se cae. Los que no permiten lectura directa del navegador (CORS), a través de `servidor.py`.
 - Importar listas M3U desde el ⚙: elegir grupos y crear una lista de Mitv por grupo, con nombre y logo de cada canal.
+- **Sub-categorías:** la lista importada queda como un grupo en el selector (`<optgroup>`), con sus categorías
+  (`group-title`) como sub-listas. Por dentro el nombre es "TV España / Generalistas", así que respaldos, archivo de
+  datos y sincronización no cambian. Las listas propias también podrían agruparse igual ("Noticias / Chile").
+  El M3U trae un solo nivel; reunir "Int. América / Europa / Asia…" en "Internacional" sería opcional (interpretando nombres).
+- **Filtrar al importar** (lo revisa `servidor.py`, varios a la vez, con barra de progreso; ~1–2 min para 571):
+  - ✔ funcionan · 🌍 bloqueados por país (403) · 🔒 requieren autorización (401) o tienen DRM (`#EXT-X-KEY` cifrado) ·
+    ✘ no existen / no responden (404, sin servidor) · ⚠ URLs con marcadores de publicidad sin rellenar (`[DEVICE_ID]`, `[IP]`…).
+  - Revisar en profundidad: lista maestra → primera calidad → primer fragmento (hay canales que entregan la lista a
+    cualquiera y bloquean recién el video, como "Teledeporte GEO").
+  - Resumen antes de crear las listas, con incluir/descartar por tipo (por defecto solo los que funcionan).
+  - Duplicados del mismo canal: queda la primera dirección que funciona; las otras, como respaldo automático.
+  - Lo descartado queda anotado, con "Revisar de nuevo" (hay canales que vuelven). Sin servidor se importa sin filtro.
 - La lista oficial está en `https://www.tdtchannels.com/lists/tv.m3u8` (proyecto `github.com/LaQuay/TDTChannels`,
   licencia Apache 2.0, actualizado a diario). Prueba del 2026-10-22: 26 de 30 canales responden desde Chile;
   los "GEO" solo funcionan desde España.
