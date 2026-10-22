@@ -44,7 +44,10 @@ if (!config.vistaFav && !fuente().length && Object.keys(config.listas).length ==
 // (si la página se abrió en la dirección antigua y el servidor está corriendo, primero se muda a la nueva)
 mudarseSiHaceFalta().then(mudado => {
   if (mudado) return;
-  sincronizarAlIniciar().then(() => { if (fondo.classList.contains('abierto') && fuente().length) cerrarPanel(); });
+  sincronizarAlIniciar().then(() => {
+    if (fondo.classList.contains('abierto') && fuente().length) cerrarPanel();
+    ajustarCamaras();   // ya se sabe si hay servidor: algunas cámaras se conectan a través de él
+  });
 });
 // Si el visualizador quedó encendido, se reactiva solo (el permiso de la entrada ya está dado)
 if (config.visualActivo) iniciarVisual(true);

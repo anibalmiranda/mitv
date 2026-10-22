@@ -6,6 +6,7 @@
 #   /api/video?id=XXXXXXXXXXX → canal dueño de un video y si es (o fue) un directo
 #   /api/directo?canal=UC…    → directo que el canal está transmitiendo ahora
 #   /api/datos (GET / POST)   → copia en archivo de tus listas, favoritos y ajustes (ver CARPETA_DATOS)
+#   /api/camara?url=...       → último cuadro de una cámara IP (MJPEG o foto fija), ver "Cámaras IP"
 # Solo usa la biblioteca estándar de Python (no hay que instalar nada) y solo escucha en este equipo.
 #
 # Uso: python servidor.py [puerto]   (por defecto 18090)
@@ -179,6 +180,114 @@ def guardar_datos(datos):
                 os.remove(os.path.join(CARPETA_RESPALDOS, n))
 
 
+# ---------- Cámaras IP a través del servidor ----------
+# El navegador abre como máximo ~6 conexiones a la vez con un mismo equipo, y un stream MJPEG ocupa una todo
+# el tiempo: con más cámaras del mismo equipo, las demás no cargaban. Además, las cámaras de foto fija
+# (snapshot.jpg) se quedaban quietas y el navegador no deja poner usuario:clave en la URL de una imagen.
+# Aquí el servidor se conecta a la cámara (una conexión por cámara, sin ese límite), guarda su último cuadro y
+# la página se lo pide con consultas cortas (/api/camara?url=...). Si nadie la pide en 20 s, se desconecta.
+CAMARA_INACTIVA_S = 20
+CAMARA_FOTO_CADA_S = 1.0       # cámaras de foto fija: se vuelven a pedir cada segundo
+MAX_CAMARAS = 40
+MAX_CUADRO = 8 * 1024 * 1024
+
+
+class Camara:
+    def __init__(self, url):
+        self.url = url
+        self.cuadro = None
+        self.error = None
+        self.acceso = time.time()
+        self.hilo = None
+        self.listo = threading.Event()
+
+    def pedir(self):
+        partes = urllib.parse.urlsplit(self.url)
+        url = self.url
+        cabeceras = {'User-Agent': CABECERAS_YT['User-Agent']}
+        if partes.username:   # usuario:clave en la URL → autenticación básica
+            import base64
+            cred = urllib.parse.unquote(partes.username) + ':' + urllib.parse.unquote(partes.password or '')
+            cabeceras['Authorization'] = 'Basic ' + base64.b64encode(cred.encode('utf-8')).decode('ascii')
+            url = urllib.parse.urlunsplit((partes.scheme, partes.hostname + (':%d' % partes.port if partes.port else ''),
+                                           partes.path, partes.query, ''))
+        return urllib.request.urlopen(urllib.request.Request(url, headers=cabeceras), timeout=15)
+
+    def activa(self):
+        return time.time() - self.acceso < CAMARA_INACTIVA_S
+
+    def correr(self):
+        try:
+            while self.activa():
+                try:
+                    with self.pedir() as r:
+                        tipo = (r.headers.get('Content-Type') or '').lower()
+                        if 'multipart' in tipo:
+                            self.leer_stream(r)          # MJPEG: vuelve cuando se corta o nadie la mira
+                        elif tipo.startswith('image/'):
+                            self.guardar(r.read(MAX_CUADRO))
+                            time.sleep(CAMARA_FOTO_CADA_S)
+                        else:
+                            self.error = 'la dirección no entrega imágenes (' + (tipo or 'sin tipo') + ')'
+                            self.listo.set()
+                            time.sleep(10)
+                except (urllib.error.URLError, OSError, ValueError) as e:
+                    self.error = 'la cámara no responde (' + str(getattr(e, 'reason', e)) + ')'
+                    self.listo.set()
+                    time.sleep(3)
+        finally:
+            self.hilo = None
+
+    def leer_stream(self, r):
+        buf = b''
+        while self.activa():
+            trozo = r.read1(65536) if hasattr(r, 'read1') else r.read(65536)
+            if not trozo:
+                return
+            buf += trozo
+            # Cada cuadro JPEG va de FF D8 a FF D9; se guarda el último completo
+            fin = buf.rfind(b'\xff\xd9')
+            if fin >= 0:
+                ini = buf.rfind(b'\xff\xd8', 0, fin)
+                if ini >= 0:
+                    self.guardar(buf[ini:fin + 2])
+                buf = buf[fin + 2:]
+            if len(buf) > MAX_CUADRO:
+                buf = b''
+
+    def guardar(self, cuadro):
+        if cuadro:
+            self.cuadro = cuadro
+            self.error = None
+            self.listo.set()
+
+
+_camaras = {}
+_camaras_lock = threading.Lock()
+
+
+def cuadro_camara(url):
+    """Último cuadro de la cámara (bytes) o un texto de error."""
+    with _camaras_lock:
+        cam = _camaras.get(url)
+        nueva = not cam
+        if not cam:
+            for u in [u for u, c in _camaras.items() if not c.activa() and not c.hilo]:
+                del _camaras[u]
+            if len(_camaras) >= MAX_CAMARAS:
+                return 'demasiadas cámaras a la vez'
+            cam = _camaras[url] = Camara(url)
+        cam.acceso = time.time()
+        if not cam.hilo:
+            cam.hilo = threading.Thread(target=cam.correr, daemon=True)
+            cam.hilo.start()
+    # Solo la primera consulta espera a que llegue un cuadro; las siguientes responden al tiro (una cámara
+    # que no contesta no debe dejar ocupadas las pocas conexiones que el navegador abre con este servidor)
+    if cam.cuadro is None and nueva:
+        cam.listo.wait(8)
+    return cam.cuadro if cam.cuadro is not None else (cam.error or 'conectando con la cámara…')
+
+
 # ---------- Servidor ----------
 class Manejador(SimpleHTTPRequestHandler):
     puerto = PUERTO_POR_DEFECTO
@@ -235,6 +344,8 @@ class Manejador(SimpleHTTPRequestHandler):
         if not self.host_valido():
             return self.responder(403, {'error': 'dirección no permitida'})
         q = {k: v[0] for k, v in urllib.parse.parse_qs(url.query).items()}
+        if url.path == '/api/camara':
+            return self.entregar_camara(q.get('url', ''))
         try:
             res = self.api(url.path[5:], q)
         except urllib.error.HTTPError as e:
@@ -285,6 +396,19 @@ class Manejador(SimpleHTTPRequestHandler):
             return recordado('directo:' + q['canal'], 60, lambda: info_directo(q['canal']))
         return None
 
+    def entregar_camara(self, url_camara):
+        if not re.match(r'^https?://', url_camara, re.IGNORECASE):
+            return self.responder(400, {'error': 'falta la dirección de la cámara (http:// o https://)'})
+        res = cuadro_camara(url_camara)
+        if isinstance(res, str):
+            return self.responder(502, {'error': res})
+        self.send_response(200)
+        self.send_header('Content-Type', 'image/jpeg')
+        self.send_header('Cache-Control', 'no-store')
+        self.send_header('Content-Length', str(len(res)))
+        self.end_headers()
+        self.wfile.write(res)
+
     def responder(self, codigo, datos):
         cuerpo = json.dumps(datos, ensure_ascii=False).encode('utf-8')
         self.send_response(codigo)
@@ -301,7 +425,7 @@ class Manejador(SimpleHTTPRequestHandler):
     def log_message(self, formato, *args):
         # Solo se anotan las consultas a YouTube y los errores, no cada archivo entregado ni cada guardado
         error = len(args) > 1 and str(args[1])[:1] in '45'
-        rutina = self.path.startswith('/api/datos') or self.path.startswith('/api/estado')
+        rutina = any(self.path.startswith(r) for r in ('/api/datos', '/api/estado', '/api/camara', '/api/eventos'))
         if error or (self.path.startswith('/api/') and not rutina):
             super().log_message(formato, *args)
 
