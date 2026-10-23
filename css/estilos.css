@@ -636,3 +636,33 @@ body.arrastrando .celda video.tv { pointer-events: none; }
 #tvProgreso { height: 4px; background: #2a2a2f; border-radius: 2px; overflow: hidden; }
 #tvBarra { height: 100%; width: 0; background: #2cb67d; transition: width .2s; }
 #tvAviso { font-size: 12px; color: #9fd0ff; min-height: 16px; }
+
+/* Botón ⇄ de cada cuadro (mover.js) y su ventana */
+.celda .mover {
+  position: absolute; top: 6px; right: 198px; z-index: 4;
+  width: 26px; height: 26px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(0,0,0,.65); color: #fff; font-size: 14px; line-height: 26px;
+  opacity: 0; transition: opacity .15s;
+}
+.celda:hover .mover { opacity: 1; }
+.celda.camara .mover { right: 134px; }   /* las cámaras no tienen 🔍 ni 🎵 */
+body.modo-audio .celda .mover { top: 50%; transform: translateY(-50%); right: 170px; }
+body.modo-audio .celda.camara .mover { right: 138px; }
+#fondoMover {
+  position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 32;
+  display: none; align-items: center; justify-content: center;
+}
+#fondoMover.abierto { display: flex; }
+#panelMover {
+  background: var(--panel); border: 1px solid var(--borde); border-radius: 10px;
+  width: min(520px, 92vw); padding: 18px; display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+#panelMover h2 { font-size: 17px; font-weight: 600; }
+#panelMover p { font-size: 13px; color: var(--suave); word-break: break-word; }
+#panelMover p b { color: var(--texto); }
+#moverDestino, #moverNueva {
+  background: #111113; color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 6px 8px; font-size: 13px;
+}
+#moverNueva { flex: 1; min-width: 180px; }
+#avisoMover { font-size: 12px; color: #ffb4b4; min-height: 15px; }

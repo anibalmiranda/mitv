@@ -233,6 +233,13 @@ function render(reutilizar) {
         celda.appendChild(bFondo);
       }
 
+      const bMover = document.createElement('button');
+      bMover.className = 'mover';
+      bMover.textContent = '⇄';
+      bMover.title = 'Mover o copiar a otra lista';
+      bMover.addEventListener('click', () => abrirMover(celda));
+      celda.appendChild(bMover);
+
       const bMax = document.createElement('button');
       bMax.className = 'maximizar';
       bMax.title = 'Ampliar / miniatura';

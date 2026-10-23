@@ -8,10 +8,13 @@ $('btnGuardar').addEventListener('click', guardarPanel);
 fondo.addEventListener('click', e => { if (e.target === fondo) cerrarPanel(); });
 document.addEventListener('keydown', e => {
   const panelAbierto = fondo.classList.contains('abierto');
-  const buscarAbierto = fondoBuscar.classList.contains('abierto') || fondoEstado.classList.contains('abierto');
+  // Cualquier ventana abierta (buscar, estado, mover, importar TV): los atajos de una tecla no actúan
+  const buscarAbierto = [fondoBuscar, fondoEstado, fondoMover, fondoTv].some(v => v.classList.contains('abierto'));
   const enCampo = e.target && e.target.matches && e.target.matches('input, textarea, select');
   if (e.key === 'Escape') {
     if (document.body.classList.contains('solo-visual')) { e.preventDefault(); salirEscena(); return; }   // vuelve al video
+    if (fondoMover.classList.contains('abierto')) { e.preventDefault(); cerrarMover(); return; }
+    if (fondoTv.classList.contains('abierto')) { e.preventDefault(); cerrarImportarTv(); return; }
     if (fondoEstado.classList.contains('abierto')) { e.preventDefault(); cerrarEstado(); return; }
     if (buscarAbierto) { e.preventDefault(); cerrarBuscar(); return; }
     if (panelAbierto) cerrarPanel();

@@ -238,6 +238,35 @@ prueba('eliminar un grupo completo no toca la lista suelta con el mismo nombre',
   igual(w.eval('config.tv["hls:https://x.invalid/1.m3u8"]'), undefined, 'se limpian los datos de canales sin uso');
   cambiarLista('A');
 });
+prueba('mover y copiar un cuadro a otra lista (sin duplicar)', async () => {
+  w.eval('config.listas["M1"] = ["https://www.youtube.com/watch?v=mmmmmmmmmm1", "https://www.youtube.com/watch?v=mmmmmmmmmm2"]; ' +
+         'config.listas["M2"] = ["https://youtu.be/mmmmmmmmmm2"]; config.actual = "M1"');
+  w.pintarSelector(); w.render(true); await espera(300);
+  // Mover el primero a M2
+  c()[0].querySelector('.mover').click();
+  cierto(d.getElementById('fondoMover').classList.contains('abierto'));
+  cierto(![...d.querySelectorAll('#moverDestino option')].some(o => o.value === 'M1'), 'no ofrece la lista actual');
+  d.getElementById('moverDestino').value = 'M2';
+  d.getElementById('btnMoverMover').click();
+  igual(w.eval('config.listas.M1'), ['https://www.youtube.com/watch?v=mmmmmmmmmm2']);
+  igual(w.eval('config.listas.M2'), ['https://youtu.be/mmmmmmmmmm2', 'https://www.youtube.com/watch?v=mmmmmmmmmm1']);
+  igual(c().length, 1, 'salió de la grilla');
+  // Copiar el que ya está en M2 (escrito distinto): no se duplica y sigue aquí
+  c()[0].querySelector('.mover').click();
+  d.getElementById('moverDestino').value = 'M2';
+  d.getElementById('btnMoverCopiar').click();
+  igual(w.eval('config.listas.M2').length, 2, 'no se duplica');
+  cierto(/Ya estaba/.test(d.getElementById('indicador').textContent));
+  // Copiar a una lista nueva agrupada
+  c()[0].querySelector('.mover').click();
+  d.getElementById('moverDestino').value = '__nueva__'; d.getElementById('moverDestino').dispatchEvent(new w.Event('change'));
+  cierto(!d.getElementById('moverNueva').hidden, 'pide el nombre');
+  d.getElementById('moverNueva').value = 'Grupo X / Nueva';
+  d.getElementById('btnMoverCopiar').click();
+  igual(w.eval('config.listas["Grupo X / Nueva"]'), ['https://www.youtube.com/watch?v=mmmmmmmmmm2']);
+  igual(w.eval('config.listas.M1').length, 1, 'copiar lo deja en la original');
+  cambiarLista('A');
+});
 prueba('quitar los que no funcionan: se comentan con motivo y se reconocen como descartados', () => {
   w.eval('config.listas["Z"] = ["https://www.youtube.com/watch?v=zzzzzzzzzzz", "https://www.youtube.com/watch?v=yyyyyyyyyyy"]; config.actual = "Z"');
   w.render(true);
