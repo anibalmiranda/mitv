@@ -483,7 +483,16 @@ function habilitarArrastre(celda) {
 }
 
 // Quita un cuadro sin recargar los demás (en la vista de favoritos, lo saca de favoritos)
+// Si era el que estaba ampliado (doble clic o pantalla completa), la vista avanza al siguiente, como con la flecha →
+// (también al moverlo a otra lista con ⇄, que usa esta misma función).
 function quitar(celda) {
+  const eraAmpliado = celda.classList.contains('max') || !!(fundido && fundido.nueva === celda);
+  let siguiente = null;
+  if (eraAmpliado) {
+    terminarFundidoImagen();
+    const lista = validas();
+    if (lista.length > 1) siguiente = lista[(lista.indexOf(celda) + 1) % lista.length];
+  }
   if (celda.dataset.mute === '0') anotarAudio(celda, false, causaAudio || 'quitaste el cuadro que sonaba');
   celdas = celdas.filter(c => c !== celda);
   celda.remove();
@@ -491,4 +500,6 @@ function quitar(celda) {
   sincronizarUrls();
   ajustarGrilla();
   pintarFavsBoton();
+  if (siguiente) conCausa(causaAudio || 'quitaste el canal ampliado: pasa al siguiente', () => irA(siguiente));
+  else if (eraAmpliado) pintarAmpliado();   // era el último: vuelve a la grilla
 }

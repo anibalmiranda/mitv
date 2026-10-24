@@ -77,7 +77,7 @@ body.modo-audio .celda.ins-despues { box-shadow: inset 0 -4px 0 var(--acento); }
 body.modo-audio .celda .aviso-caido { display: none; }
 body.modo-audio .celda.caido .fila-audio .estado { color: #ffb4b4; }
 .celda.es-fav .fav { opacity: 1; color: var(--oro); }
-.celda.max .quitar { display: none; }
+/* (el ✕ también se ve en el ampliado: al quitarlo, la vista pasa al siguiente) */
 
 /* Capa que captura el clic (audio) y el arrastre; deja libre la barra de controles de YouTube */
 .celda .capa-audio {
