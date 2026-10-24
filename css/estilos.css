@@ -697,3 +697,9 @@ body.tira-abierta #nombreAmpliado, body.solo-visual #nombreAmpliado { display: n
 }
 @keyframes girarCarga { to { transform: rotate(360deg); } }
 body.modo-audio .celda .carga-tv { display: none; }
+
+/* ✕ en la vista ampliada: primer clic pide confirmar */
+.celda .quitar.confirmar {
+  width: auto; padding: 0 12px; border-radius: 13px; opacity: 1;
+  background: #b3261e; font-size: 13px; font-weight: 600; white-space: nowrap;
+}

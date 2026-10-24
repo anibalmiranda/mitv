@@ -107,6 +107,9 @@ prueba('ampliado: quitar o mover el canal pasa al siguiente', async () => {
   const q = c()[0].querySelector('.quitar');
   igual(w.getComputedStyle(q).display, 'block', 'el ✕ se ve en el ampliado');
   q.click();
+  igual(c().length, 3, 'el primer clic no quita: pide confirmar');
+  cierto(/Clic de nuevo/.test(q.textContent), q.textContent);
+  q.click();
   igual(c().map(id), ['q0000000002', 'q0000000003'], 'se quitó');
   cierto(c()[0].classList.contains('max'), 'quedó ampliado el siguiente');
   igual(conAudio(), 0, 'y con el audio');
@@ -118,7 +121,8 @@ prueba('ampliado: quitar o mover el canal pasa al siguiente', async () => {
   igual(c().map(id), ['q0000000003']);
   cierto(c()[0].classList.contains('max'), 'quedó ampliado el siguiente');
   igual(w.eval('config.listas.Q2'), [Y('q0000000002')]);
-  // El último: vuelve a la grilla
+  // El último: vuelve a la grilla (con confirmación)
+  c()[0].querySelector('.quitar').click();
   c()[0].querySelector('.quitar').click();
   igual(c().length, 0);
   cierto(!d.body.classList.contains('con-ampliado'), 'sin ampliado');

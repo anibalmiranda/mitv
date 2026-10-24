@@ -274,7 +274,17 @@ function render(reutilizar) {
     btn.className = 'quitar';
     btn.title = config.vistaFav ? 'Quitar de favoritos' : 'Quitar';
     btn.textContent = '✕';
-    btn.addEventListener('click', () => quitar(celda));
+    // En la vista ampliada pide confirmar (segundo clic); en la grilla quita al tiro
+    btn.addEventListener('click', () => {
+      if (celda.classList.contains('max') && !btn.classList.contains('confirmar')) {
+        btn.classList.add('confirmar');
+        btn.textContent = '¿Quitar este canal? Clic de nuevo';
+        btn._timer = setTimeout(() => { btn.classList.remove('confirmar'); btn.textContent = '✕'; }, 3500);
+        return;
+      }
+      clearTimeout(btn._timer);
+      quitar(celda);
+    });
     celda.appendChild(btn);
 
     habilitarArrastre(celda);
