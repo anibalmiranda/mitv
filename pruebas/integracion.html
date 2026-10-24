@@ -58,6 +58,25 @@ prueba('tecla M silencia todo y lo devuelve al mismo', () => {
   tecla('m'); igual(conAudio(), -1);
   tecla('m'); igual(conAudio(), 0);
 });
+prueba('silenciar todo (M) silencia al instante, también los canales de TV', async () => {
+  w.eval('config.listas["S"] = ["https://tv.invalid/canal.m3u8", "https://www.youtube.com/watch?v=s0000000001"]; config.actual = "S"');
+  w.pintarSelector(); w.render(true); await espera(1500);
+  const v = c()[0].querySelector('video.tv');
+  w.alternarAudio(c()[0]);
+  igual(v.muted, false, 'el canal de TV suena');
+  tecla('m');
+  igual(v.muted, true, 'M lo silencia en el acto (sin esperar al vigilante)');
+  tecla('m');
+  igual(v.muted, false, 'M de nuevo devuelve el sonido al mismo');
+  // Clic en el que suena (silencio sin fundido): también inmediato
+  w.alternarAudio(c()[0]);
+  igual(v.muted, true, 'silenciar con clic también es inmediato');
+  // Vigilante: si algo lo deja sonando sin tener el audio, se vuelve a silenciar
+  v.muted = false;
+  await espera(50);
+  igual(v.muted, true, 'el vigilante lo vuelve a silenciar');
+  cambiarLista('A'); await espera(1500);
+});
 prueba('teclas 1 a 9 van a ese video', () => {
   tecla('3'); igual(conAudio(), 2);
   tecla('9'); cierto(/No hay un video 9/.test(d.getElementById('indicador').textContent));

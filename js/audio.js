@@ -54,9 +54,12 @@ function fijarAudio(celda, silenciar, fadeMs) {
       // Refuerzo por si alguna orden se perdió en el camino
       setTimeout(() => { if (celda.dataset.mute === '1' && !celda._rampa) comandoYT(ifr, 'mute'); }, 400);
     };
-    if (fadeMs > 0) rampa(celda, celda._vol == null ? volumenDe(celda) : celda._vol, 0, fadeMs, fin);
-    else { detenerRampa(celda); fin(); }
+    // Se marca ANTES de silenciar: fin() revisa la marca (si no, el silencio sin fundido no se mandaba y solo
+    // llegaba tarde, cuando lo notaba el vigilante; en los canales de TV no llegaba nunca)
+    const desde = celda._vol == null ? volumenDe(celda) : celda._vol;
     celda.dataset.mute = '1';
+    if (fadeMs > 0) rampa(celda, desde, 0, fadeMs, fin);
+    else { detenerRampa(celda); fin(); }
   } else {
     // Si venía bajando (fundido de salida a medias), sube desde donde iba
     const desde = celda._rampa ? (celda._vol || 0) : 0;
@@ -197,10 +200,12 @@ btnMuteGeneral.addEventListener('click', () => conCausa('silenciar todo (botón,
     mostrarMensaje('🔊 Sonido activado');
     return;
   }
-  const c = celdas.find(x => x.dataset.mute === '0');
-  if (!c) { mostrarMensaje('No hay ningún video sonando'); return; }
-  fijarAudio(c, true, 0);
-  silencioGeneral = c;
+  // Silencia al tiro todo lo que esté sonando, y además manda "silenciar" a cada reproductor de la grilla por si
+  // alguno suena sin estar marcado (p. ej. si se le subió el volumen con los controles propios de YouTube)
+  const sonando = celdas.filter(x => x.dataset.mute === '0');
+  sonando.forEach(x => fijarAudio(x, true, 0));
+  contenedor.querySelectorAll(SEL_REPRODUCTOR).forEach(f => comandoYT(f, 'mute'));
+  silencioGeneral = sonando[0] || null;   // al volver a apretar, el audio vuelve a ese
   pintarMuteGeneral();
   mostrarMensaje('🔇 Todo silenciado');
 }));

@@ -29,6 +29,10 @@ function crearTv(celda, item) {
   aviso.className = 'carga-tv';
   aviso.innerHTML = '<span class="ruedita"></span><span>Cargando canal…</span>';
   celda.appendChild(aviso);
+  // Vigilante: si suena sin tener el audio (o con el audio de fondo activo), se vuelve a silenciar al tiro
+  v.addEventListener('volumechange', () => {
+    if (!v.muted && (celda.dataset.mute === '1' || fondoActivo) && !celda._rampa) v.muted = true;
+  });
   v.addEventListener('waiting', () => { if (celda._hls || v.getAttribute('src')) celda.classList.add('cargando-tv'); });
   v.addEventListener('playing', () => {
     celda._estado = 1;
