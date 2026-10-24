@@ -32,6 +32,7 @@ let config = {
   cuentaAtras: { entrada: '07:49', semana: 9, viernes: 8, visible: false },   // cuenta atrás hasta la salida
   autoplay: true, mute: true, modoAudio: false,
   fade: 7,      // segundos de fundido al pasar el audio de un video a otro (0 = sin fundido)
+  tiraFija: false, // la tira de abajo queda abierta al ampliar un video o entrar a pantalla completa
   fadeImg: 1.5, // segundos de fundido de imagen al cambiar de video ampliado (0 = sin fundido)
   ultimos: {},  // último video seleccionado por vista, para retomarlo al cargar
   carruselSeg: 30, // cada cuántos segundos cambia el carrusel
@@ -78,6 +79,8 @@ function cargar() {
 }
 // Completa o corrige lo que falte o venga dañado (de una versión anterior, de un respaldo, del archivo)
 function normalizarConfig() {
+  config.tiraFija = !!config.tiraFija;
+  if (typeof pintarFijarTira === 'function') pintarFijarTira();
   if (!config.listas || !Object.keys(config.listas).length) config.listas = { 'Principal': [] };
   if (!config.listas[config.actual]) config.actual = Object.keys(config.listas)[0];
   if (!Array.isArray(config.favoritos)) config.favoritos = [];

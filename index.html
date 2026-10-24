@@ -8,7 +8,7 @@
 <!-- Abre de antemano las conexiones con YouTube y sus miniaturas (la grilla carga más rápido) -->
 <link rel="preconnect" href="https://www.youtube.com">
 <link rel="preconnect" href="https://i.ytimg.com">
-<link rel="stylesheet" href="css/estilos.css?v=20261024g">
+<link rel="stylesheet" href="css/estilos.css?v=20261024h">
 </head>
 <body>
 
@@ -95,7 +95,12 @@
   <button id="btnTira" title="Ver todos los videos (↓)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
   </button>
-  <div id="tira"><div id="tiraItems"></div></div>
+  <div id="tira">
+    <button class="tira-flecha" id="tiraAnt" title="Ver los anteriores">‹</button>
+    <div id="tiraItems"></div>
+    <button class="tira-flecha" id="tiraSig" title="Ver los siguientes">›</button>
+    <button id="btnFijarTira" title="Dejar la tira fija (queda abierta al ampliar o en pantalla completa)">📌</button>
+  </div>
 </div>
 
 <div id="indicador"></div>
@@ -277,33 +282,33 @@
 
 <!-- hls.js (Apache 2.0, js/vendor/LICENSE-hls.js.txt): reproduce canales de TV .m3u8 -->
 <script src="js/vendor/hls.min.js?v=1.6.13"></script>
-<script src="js/config.js?v=20261024g"></script>
-<script src="js/urls.js?v=20261024g"></script>
-<script src="js/grilla.js?v=20261024g"></script>
-<script src="js/favoritos.js?v=20261024g"></script>
-<script src="js/reproductor.js?v=20261024g"></script>
-<script src="js/audio.js?v=20261024g"></script>
-<script src="js/visualizador.js?v=20261024g"></script>
-<script src="js/pantalla.js?v=20261024g"></script>
-<script src="js/navegacion.js?v=20261024g"></script>
-<script src="js/carrusel.js?v=20261024g"></script>
-<script src="js/ampliar.js?v=20261024g"></script>
-<script src="js/pausa.js?v=20261024g"></script>
-<script src="js/panel.js?v=20261024g"></script>
-<script src="js/respaldo.js?v=20261024g"></script>
-<script src="js/camaras.js?v=20261024g"></script>
-<script src="js/buscar.js?v=20261024g"></script>
-<script src="js/externos.js?v=20261024g"></script>
-<script src="js/directos.js?v=20261024g"></script>
-<script src="js/sincronizar.js?v=20261024g"></script>
-<script src="js/teclas.js?v=20261024g"></script>
-<script src="js/superfav.js?v=20261024g"></script>
-<script src="js/cuentaatras.js?v=20261024g"></script>
-<script src="js/fondo.js?v=20261024g"></script>
-<script src="js/estado.js?v=20261024g"></script>
-<script src="js/tv.js?v=20261024g"></script>
-<script src="js/comprobar.js?v=20261024g"></script>
-<script src="js/mover.js?v=20261024g"></script>
-<script src="js/main.js?v=20261024g"></script>
+<script src="js/config.js?v=20261024h"></script>
+<script src="js/urls.js?v=20261024h"></script>
+<script src="js/grilla.js?v=20261024h"></script>
+<script src="js/favoritos.js?v=20261024h"></script>
+<script src="js/reproductor.js?v=20261024h"></script>
+<script src="js/audio.js?v=20261024h"></script>
+<script src="js/visualizador.js?v=20261024h"></script>
+<script src="js/pantalla.js?v=20261024h"></script>
+<script src="js/navegacion.js?v=20261024h"></script>
+<script src="js/carrusel.js?v=20261024h"></script>
+<script src="js/ampliar.js?v=20261024h"></script>
+<script src="js/pausa.js?v=20261024h"></script>
+<script src="js/panel.js?v=20261024h"></script>
+<script src="js/respaldo.js?v=20261024h"></script>
+<script src="js/camaras.js?v=20261024h"></script>
+<script src="js/buscar.js?v=20261024h"></script>
+<script src="js/externos.js?v=20261024h"></script>
+<script src="js/directos.js?v=20261024h"></script>
+<script src="js/sincronizar.js?v=20261024h"></script>
+<script src="js/teclas.js?v=20261024h"></script>
+<script src="js/superfav.js?v=20261024h"></script>
+<script src="js/cuentaatras.js?v=20261024h"></script>
+<script src="js/fondo.js?v=20261024h"></script>
+<script src="js/estado.js?v=20261024h"></script>
+<script src="js/tv.js?v=20261024h"></script>
+<script src="js/comprobar.js?v=20261024h"></script>
+<script src="js/mover.js?v=20261024h"></script>
+<script src="js/main.js?v=20261024h"></script>
 </body>
 </html>

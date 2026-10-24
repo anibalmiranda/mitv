@@ -25,7 +25,9 @@ function alternarMax(celda) {
 // y las flechas del teclado navegan (body.con-ampliado); al volver a la grilla desaparecen.
 function pintarAmpliado() {
   const hay = !!contenedor.querySelector('.celda.max');
+  const habia = document.body.classList.contains('con-ampliado');
   document.body.classList.toggle('con-ampliado', hay);
+  if (hay && !habia && config.tiraFija) abrirTira();   // 📌 tira fija: se abre sola al ampliar
   if (!hay && !document.fullscreenElement) cerrarTira();
   pintarNombreAmpliado();
   if (hay) programarCarga();   // precarga el anterior y el siguiente del ampliado

@@ -106,7 +106,7 @@ function armarTira() {
       it.appendChild(s);
     }
     it.title = t.textContent;
-    it.addEventListener('click', () => { irA(c); cerrarTira(); reiniciarCarrusel(); });
+    it.addEventListener('click', () => { irA(c); if (!config.tiraFija) cerrarTira(); else armarTira(); reiniciarCarrusel(); });
     cont.appendChild(it);
   });
   // Centra el actual en la tira
@@ -116,6 +116,7 @@ function armarTira() {
     cont.scrollLeft = sel.offsetLeft - (cont.clientWidth - sel.offsetWidth) / 2;
     cont.style.scrollBehavior = '';
   }
+  pintarFlechasTira();
 }
 function abrirTira() { armarTira(); document.body.classList.add('tira-abierta'); }
 function cerrarTira() { document.body.classList.remove('tira-abierta'); }
@@ -123,6 +124,32 @@ function alternarTira() {
   if (document.body.classList.contains('tira-abierta')) cerrarTira(); else abrirTira();
 }
 $('btnTira').addEventListener('click', alternarTira);
+// Flechas ‹ ›: recorren la tira de a una pantalla para llegar al resto de los canales
+function desplazarTira(dir) {
+  const cont = $('tiraItems');
+  cont.scrollBy({ left: dir * cont.clientWidth * 0.85 });   // suave por el CSS (scroll-behavior)
+}
+function pintarFlechasTira() {
+  const cont = $('tiraItems');
+  const fin = cont.scrollWidth - cont.clientWidth;
+  $('tiraAnt').classList.toggle('oculta', cont.scrollLeft <= 2);
+  $('tiraSig').classList.toggle('oculta', cont.scrollLeft >= fin - 2);
+}
+$('tiraAnt').addEventListener('click', () => desplazarTira(-1));
+$('tiraSig').addEventListener('click', () => desplazarTira(1));
+$('tiraItems').addEventListener('scroll', pintarFlechasTira, { passive: true });
+window.addEventListener('resize', pintarFlechasTira);
+// 📌 Tira fija: queda abierta al ampliar un video o entrar a pantalla completa y no se cierra al elegir un canal.
+// Cerrarla a mano (botón, flecha arriba o Esc) la esconde solo hasta la próxima vez que amplíes.
+function pintarFijarTira() { $('btnFijarTira').classList.toggle('activo', !!config.tiraFija); }
+function alternarTiraFija() {
+  config.tiraFija = !config.tiraFija;
+  guardar();
+  pintarFijarTira();
+  if (config.tiraFija) abrirTira();
+  mostrarMensaje(config.tiraFija ? '📌 Tira fija: queda abierta' : 'Tira suelta: se cierra al elegir un canal');
+}
+$('btnFijarTira').addEventListener('click', alternarTiraFija);
 // La rueda del mouse mueve la tira hacia los lados
 $('tiraItems').addEventListener('wheel', e => {
   if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {

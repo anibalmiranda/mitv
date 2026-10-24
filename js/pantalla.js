@@ -18,7 +18,10 @@ document.addEventListener('fullscreenchange', () => {
   const fs = !!document.fullscreenElement;
   document.body.classList.toggle('pantalla-completa', fs);
   if (!fs) { cerrarTira(); detenerCarrusel(); salirEscena(); }
-  else pedirMaxCalidad(contenedor.querySelector('.celda.max'));   // al crecer a toda la pantalla
+  else {
+    pedirMaxCalidad(contenedor.querySelector('.celda.max'));   // al crecer a toda la pantalla
+    if (config.tiraFija) abrirTira();
+  }
   programarPausaOcultos();
   pintarPantalla();
   setTimeout(ajustarGrilla, 100);

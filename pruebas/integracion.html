@@ -203,6 +203,41 @@ prueba('tira de miniaturas', () => {
   w.abrirTira(); igual(d.querySelectorAll('#tiraItems .item').length, 4, 'tres videos y la cámara');
   w.cerrarTira(); cierto(!d.body.classList.contains('tira-abierta'));
 });
+prueba('tira: flechas para recorrer todos los canales y 📌 para dejarla fija', async () => {
+  const L = Array.from({ length: 14 }, (_, i) => 'https://www.youtube.com/watch?v=' + ('t' + i).padEnd(11, '0'));
+  w.eval('config.listas["T"] = ' + JSON.stringify(L) + '; config.actual = "T"; config.tiraFija = false');
+  w.pintarSelector(); w.render(true); await espera(200);
+  const cont = d.getElementById('tiraItems');
+  try {
+  w.alternarMax(c()[0]);
+  w.abrirTira();
+  cierto(cont.scrollWidth > cont.clientWidth, 'hay más canales de los que caben');
+  cierto(d.getElementById('tiraAnt').classList.contains('oculta'), 'al comienzo no hay flecha hacia atrás');
+  cierto(!d.getElementById('tiraSig').classList.contains('oculta'), 'hay flecha hacia adelante');
+  cont.style.scrollBehavior = 'auto';
+  d.getElementById('tiraSig').click(); await espera(600);
+  cierto(cont.scrollLeft > 0, '› avanza a los siguientes');
+  cierto(!d.getElementById('tiraAnt').classList.contains('oculta'), 'ahora aparece la flecha hacia atrás');
+  // Suelta: elegir un canal la cierra
+  cont.querySelectorAll('.item')[3].click();
+  cierto(!d.body.classList.contains('tira-abierta'), 'sin fijar, se cierra al elegir');
+  // Fija: se abre sola y no se cierra al elegir
+  d.getElementById('btnFijarTira').click();
+  cierto(w.eval('config.tiraFija') && d.getElementById('btnFijarTira').classList.contains('activo'), 'queda fija');
+  cierto(d.body.classList.contains('tira-abierta'), 'al fijarla se abre');
+  cont.querySelectorAll('.item')[5].click();
+  cierto(d.body.classList.contains('tira-abierta'), 'fija: sigue abierta al elegir');
+  w.restaurarTodo(); w.cerrarTira();
+  w.alternarMax(c()[1]);
+  cierto(d.body.classList.contains('tira-abierta'), 'fija: se abre sola al ampliar');
+  w.restaurarTodo();
+  d.getElementById('btnFijarTira').click();
+  cierto(!w.eval('config.tiraFija'), 'se suelta de nuevo');
+  } finally {
+    w.eval('config.tiraFija = false'); w.restaurarTodo(); w.cerrarTira(); cont.style.scrollBehavior = '';
+    cambiarLista('A'); await espera(1500);
+  }
+});
 prueba('carrusel: inicia y se detiene', () => {
   w.iniciarCarrusel(); cierto(d.body.classList.contains('carrusel-activo'));
   w.detenerCarrusel(); cierto(!d.body.classList.contains('carrusel-activo'));
