@@ -41,6 +41,7 @@ function fijarAudio(celda, silenciar, fadeMs) {
   const ifr = celda.querySelector(SEL_REPRODUCTOR);
   if (!ifr) return;
   fadeMs = fadeMs || 0;
+  if ((celda.dataset.mute === '1') !== !!silenciar) anotarAudio(celda, !silenciar);   // solo si de verdad cambia
   if (silenciar) {
     const fin = () => {
       if (celda.dataset.mute !== '1') return;              // lo reactivaron durante el fundido
@@ -187,7 +188,7 @@ function olvidarSilencioGeneral() {
   silencioGeneral = null;
   pintarMuteGeneral();
 }
-btnMuteGeneral.addEventListener('click', () => {
+btnMuteGeneral.addEventListener('click', () => conCausa('silenciar todo (botón, M o ⏯)', () => {
   if (fondoActivo) { alternarSilencioFondo(); return; }   // con audio de fondo, M / ⏯ actúan sobre él
   if (silencioGeneral) {
     const c = silencioGeneral;
@@ -202,4 +203,21 @@ btnMuteGeneral.addEventListener('click', () => {
   silencioGeneral = c;
   pintarMuteGeneral();
   mostrarMensaje('🔇 Todo silenciado');
-});
+}));
+
+// ---------- Historial de audio ----------
+// Los últimos cambios de audio (qué video, si empezó a sonar o se silenció, y qué acción lo causó), para saber por
+// qué se perdió el audio. Se ve en el panel de estado (E). Cada acción que cambia el audio dice su causa con conCausa.
+let causaAudio = '';
+const historialAudio = [];
+function conCausa(causa, fn) {
+  const antes = causaAudio;
+  causaAudio = causa;
+  try { return fn(); } finally { causaAudio = antes; }
+}
+function anotarAudio(celda, sonando, causa) {
+  const tit = celda && celda.querySelector('.titulo');
+  historialAudio.unshift({ t: Date.now(), titulo: (tit && tit.textContent) || (celda && celda.dataset.linea) || '',
+                           sonando, causa: causa || causaAudio || 'otra acción' });
+  historialAudio.length = Math.min(historialAudio.length, 30);
+}

@@ -23,7 +23,13 @@ function marcarExterno(celda) {
   celda._externo = true;
   celda.classList.add('externo');
   celda.classList.remove('esperando', 'dormida');
-  if (celda.dataset.mute === '0') fijarAudio(celda, true);   // no puede sonar aquí
+  // Tenía el audio pero no puede sonar aquí: el audio pasa al siguiente que sí pueda (si no hay, silencio)
+  if (celda.dataset.mute === '0') {
+    const lista = celdas.filter(c => c === celda || puedeSonar(c));
+    const sig = lista.length > 1 ? lista[(lista.indexOf(celda) + 1) % lista.length] : null;
+    conCausa('el video que sonaba está bloqueado fuera de YouTube', () => (sig ? alternarAudio(sig) : fijarAudio(celda, true)));
+    if (sig) mostrarMensaje('🔒 Ese video solo se ve en YouTube: el audio pasa a ' + ((sig.querySelector('.titulo') || {}).textContent || 'el siguiente'));
+  }
 
   let av = celda.querySelector('.aviso-externo');
   if (!av) {

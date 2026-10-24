@@ -35,6 +35,7 @@ function ajustarGrilla() {
 // así que un cuadro reutilizado nunca se mueve en la página (moverlo recargaría su reproductor).
 // Sin reutilizar (cambiaron ajustes que van en la dirección del reproductor, o se importaron datos), todo se crea de nuevo.
 function render(reutilizar) {
+  const sonabaAntes = celdas.find(c => c.dataset.mute === '0') || null;   // para anotar si el audio se pierde
   cerrarTira();
   olvidarSilencioGeneral();   // las celdas se vuelven a crear
   if (carrusel && carrusel.vista !== vistaId()) detenerCarrusel();   // el carrusel es de la vista en que partió
@@ -58,9 +59,14 @@ function render(reutilizar) {
 
   let yaHayAudio = false;
   let idx = 0;
-  // Último video seleccionado en esta vista: se retoma al cargar
+  // Último video seleccionado en esta vista: se retoma al cargar. Si se sabe bloqueado fuera de YouTube no se retoma:
+  // no podría sonar, y el que suena se quedaría sin audio.
   const ult = config.ultimos[vistaId()];
-  const hayUlt = !!ult && fuente().some(l => clave(l) === ult.clave);
+  const hayUlt = !!ult && fuente().some(l => clave(l) === ult.clave && !esExternoConocido(l));
+  // Si el que sonaba también está en esta vista (y no hay que retomar otro), sigue sonando sin cortarse
+  const sigueSonando = (!hayUlt && [...anteriores.values()].find(c => c.dataset.mute === '0' && puedeSonar(c) &&
+                          fuente().some(l => clave(l) === clave(c.dataset.linea)))) || null;
+  if (sigueSonando) yaHayAudio = true;
   let pendiente = null;
 
   fuente().forEach(linea => {
@@ -72,10 +78,10 @@ function render(reutilizar) {
     if (previa && !reutilizadas.has(previa)) {
       reutilizadas.add(previa);
       const esUlt = !previa._externo && hayUlt && !pendiente && clave(linea) === ult.clave;
-      const muteado = previa._externo || hayUlt || config.mute || yaHayAudio;
+      const muteado = previa !== sigueSonando && (previa._externo || hayUlt || config.mute || yaHayAudio);
       if (esUlt) { previa.dataset.pendiente = '1'; pendiente = previa; }
-      else if (muteado && previa.dataset.mute === '0') fijarAudio(previa, true);
-      else if (!muteado && previa.dataset.mute === '1') fijarAudio(previa, false);
+      else if (muteado && previa.dataset.mute === '0') conCausa('cambio de lista: esta lista retoma otro video', () => fijarAudio(previa, true));
+      else if (!muteado && previa.dataset.mute === '1') conCausa('cambio de lista', () => fijarAudio(previa, false));
       if (!muteado || (esUlt && previa.dataset.mute === '0')) yaHayAudio = true;
       previa.dataset.linea = linea;
       previa.classList.remove('max', 'entrando');
@@ -174,8 +180,10 @@ function render(reutilizar) {
       let timerClic = null;
       capa.addEventListener('click', () => {
         clearTimeout(timerClic);
-        if (config.modoAudio) { alternarAudio(celda); return; }
-        timerClic = setTimeout(() => alternarAudio(celda), 250);
+        // (clic en el que ya suena = silenciarlo)
+        const causa = celda.dataset.mute === '0' ? 'clic en el cuadro que sonaba (lo silencia)' : 'clic en el cuadro';
+        if (config.modoAudio) { conCausa(causa, () => alternarAudio(celda)); return; }
+        timerClic = setTimeout(() => conCausa(causa, () => alternarAudio(celda)), 250);
       });
       capa.addEventListener('dblclick', e => {
         e.preventDefault();
@@ -278,8 +286,12 @@ function render(reutilizar) {
   actualizarCarga();
   aplicarModoAudio(false);
   pintarFavsBoton();
-  if (pendiente) prepararRetomar(pendiente, ult);
+  if (pendiente) conCausa('retomar el último video de esta lista', () => prepararRetomar(pendiente, ult));
   else ocultarAvisoRetomar();
+  // ¿Se perdió el audio sin que nadie lo silenciara? (el que sonaba no está en la vista nueva, o se recargó todo)
+  if (sonabaAntes && !sonabaAntes.isConnected && !celdas.some(c => c.dataset.mute === '0' || c.dataset.pendiente))
+    anotarAudio(sonabaAntes, false, reutilizar ? 'cambio de lista: ese video no está en la lista nueva'
+                                               : 'se recargó toda la grilla (cambio de ajustes o de datos)');
   resolverRutasPendientes();   // @handle que aún no se sabe a qué canal corresponden
 }
 
@@ -471,6 +483,7 @@ function habilitarArrastre(celda) {
 
 // Quita un cuadro sin recargar los demás (en la vista de favoritos, lo saca de favoritos)
 function quitar(celda) {
+  if (celda.dataset.mute === '0') anotarAudio(celda, false, causaAudio || 'quitaste el cuadro que sonaba');
   celdas = celdas.filter(c => c !== celda);
   celda.remove();
   reordenar();

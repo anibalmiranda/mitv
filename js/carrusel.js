@@ -46,7 +46,7 @@ function programarCarrusel() {
   carrusel.previo = setTimeout(() => saltoAleatorio(siguienteDelCarrusel()), Math.max(0, ms - 3000));
   carrusel.timer = setTimeout(() => {
     if (!validas().length) { detenerCarrusel(); return; }
-    navegar(1, true);
+    conCausa('carrusel', () => navegar(1, true));
     programarCarrusel();
   }, ms);
 }

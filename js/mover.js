@@ -60,7 +60,7 @@ function moverOCopiar(mover) {
   const k = clave(linea);
   const yaEsta = config.listas[destino].some(l => l === linea || (k && clave(l) === k));
   if (!yaEsta) config.listas[destino].push(linea);
-  if (mover && !config.vistaFav) quitar(celda);   // sale de la lista actual (también guarda)
+  if (mover && !config.vistaFav) conCausa('moviste el cuadro que sonaba a otra lista', () => quitar(celda));   // sale de la lista actual (también guarda)
   else guardar();
   pintarSelector();
   cerrarMover();

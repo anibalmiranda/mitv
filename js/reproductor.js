@@ -174,7 +174,7 @@ function retomarAudio(e) {
   // Si el clic fue sobre un video, su propio manejador decide (le da el audio a ese)
   if (e && e.target && e.target.closest && e.target.closest('.capa-audio')) return;
   if (!c.isConnected) return;
-  if (c.dataset.mute === '1') alternarAudio(c);
+  if (c.dataset.mute === '1') conCausa('primer clic de la página (retoma el último)', () => alternarAudio(c));
 }
 // Primer gesto del usuario (en fase de captura, antes que cualquier otro manejador)
 ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, retomarAudio, true));
@@ -201,7 +201,7 @@ function videoTerminado(celda) {
   if (tieneAudio && lista.length > 1) {
     const sig = lista[(lista.indexOf(celda) + 1) % lista.length];
     if (celda.classList.contains('max') && !config.modoAudio) cambiarAmpliado(sig);
-    alternarAudio(sig);
+    conCausa('el video anterior terminó (pasa al siguiente)', () => alternarAudio(sig));
     reiniciarCarrusel();
     const tit = sig.querySelector('.titulo');
     mostrarMensaje('⏭ Siguiente: ' + (tit ? tit.textContent : 'video'));

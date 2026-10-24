@@ -68,6 +68,7 @@ function aplicarFondo() {
   btnFondo.title = (fondoActivo ? 'Audio de fondo: ' + nombreFondo() + ' (clic para volver al audio de los videos)'
                                 : 'Audio de fondo: el audio de un video elegido con 🎵 suena para toda la grilla') + ' (B)';
   if (fondoActivo) {
+    if (!antes) anotarAudio(null, true, 'audio de fondo activado: suena "' + nombreFondo() + '" y la grilla queda en silencio');
     fondoSilenciado = false;
     crearReproductorFondo();
     // Silencia la grilla (el elegido sigue marcado para navegar y para volver)
@@ -75,6 +76,7 @@ function aplicarFondo() {
   } else {
     vaciarFondo();
     if (antes) {
+      anotarAudio(null, false, 'audio de fondo desactivado: vuelve el audio de los videos');
       // Vuelve el audio normal en el video que tenía el audio
       const c = celdas.find(x => x.dataset.mute === '0' && puedeSonar(x));
       if (c) {

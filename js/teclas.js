@@ -39,7 +39,7 @@ function navegarMultimedia(dir) {
   const i = lista.findIndex(c => c.dataset.mute === '0');
   const n = lista.length;
   const sig = lista[i === -1 ? (dir > 0 ? 0 : n - 1) : (i + dir + n) % n];
-  if (sig.dataset.mute === '1') alternarAudio(sig);
+  if (sig.dataset.mute === '1') conCausa('tecla multimedia ⏭ ⏮', () => alternarAudio(sig));
   reiniciarCarrusel();
   const tit = sig.querySelector('.titulo');
   mostrarMensaje((dir > 0 ? '⏭ ' : '⏮ ') + (tit ? tit.textContent : 'video'));

@@ -116,6 +116,20 @@ function armarEstado() {
   if (!celdas.length) tabla.textContent = 'Esta vista no tiene videos.';
   $('estadoResumen').textContent = cuenta.total + ' cuadro(s) · ' + cuenta.bien + ' funcionando · ' + cuenta.vivo + ' en vivo · ' +
                                    cuenta.malo + ' con problemas';
+  pintarHistorialAudio();
+}
+// Últimos cambios de audio con su causa (audio.js): para saber qué acción dejó sin sonido
+function pintarHistorialAudio() {
+  const cont = $('estadoAudioLista');
+  cont.innerHTML = '';
+  if (!historialAudio.length) { cont.textContent = 'Todavía no hay cambios de audio en esta sesión.'; return; }
+  historialAudio.slice(0, 12).forEach(h => {
+    const fila = document.createElement('div');
+    fila.className = h.sonando ? 'sonando' : 'silencio';
+    const hora = new Date(h.t).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    fila.textContent = hora + '  ' + (h.sonando ? '🔊 ' : '🔇 ') + (h.titulo ? h.titulo + ' — ' : '') + h.causa;
+    cont.appendChild(fila);
+  });
 }
 
 function abrirEstado() {

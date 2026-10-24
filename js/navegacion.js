@@ -22,7 +22,7 @@ function irA(celda) {
   const pos = lista.indexOf(celda);
   if (pos === -1) return;
   if (!config.modoAudio && !celda.classList.contains('max')) cambiarAmpliado(celda);
-  if (celda.dataset.mute === '1') alternarAudio(celda);
+  if (celda.dataset.mute === '1') conCausa(causaAudio || 'navegación (flechas, tira o número)', () => alternarAudio(celda));
   const tit = celda.querySelector('.titulo');
   mostrarMensaje((pos + 1) + ' / ' + lista.length + (tit ? ' · ' + tit.textContent : ''));
 }
@@ -46,7 +46,7 @@ function irANumero(n) {
   if (document.fullscreenElement || contenedor.querySelector('.celda.max') || config.modoAudio) irA(c);
   else if (c.dataset.tipo === 'camara') alternarMax(c);
   else {
-    if (c.dataset.mute === '1') alternarAudio(c);
+    if (c.dataset.mute === '1') conCausa('tecla de número', () => alternarAudio(c));
     const tit = c.querySelector('.titulo');
     mostrarMensaje(n + ' / ' + lista.length + (tit ? ' · ' + tit.textContent : ''));
   }

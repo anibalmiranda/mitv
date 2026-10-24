@@ -267,6 +267,44 @@ prueba('mover y copiar un cuadro a otra lista (sin duplicar)', async () => {
   igual(w.eval('config.listas.M1').length, 1, 'copiar lo deja en la original');
   cambiarLista('A');
 });
+prueba('el audio no se pierde: el que suena sigue al cambiar a una lista que también lo tiene', async () => {
+  const Y = i => 'https://www.youtube.com/watch?v=' + i;
+  w.eval('config.listas["P1"] = ["' + Y('p0000000001') + '", "' + Y('p0000000002') + '"]; ' +
+         'config.listas["P2"] = ["' + Y('p0000000002') + '", "' + Y('p0000000003') + '"]; ' +
+         'config.listas["P3"] = ["' + Y('p0000000009') + '", "' + Y('p0000000002') + '"]; ' +
+         'config.nombres["video:p0000000009"] = { titulo: "bloqueado", externo: Date.now(), t: 1 }; ' +
+         'config.ultimos["lista:P3"] = { clave: "video:p0000000009", max: false }; ' +
+         'delete config.ultimos["lista:P2"]; config.actual = "P1"; config.mute = true');
+  w.pintarSelector(); w.render(true); await espera(300);
+  w.alternarAudio(c()[1]);                        // suena p…2
+  igual(conAudio(), 1);
+  cambiarLista('P2'); await espera(300);          // P2 también lo tiene (y "Silenciados" está activo)
+  igual(c()[conAudio()] && c()[conAudio()].dataset.linea.slice(-11), 'p0000000002', 'sigue sonando en P2');
+  cambiarLista('P3'); await espera(300);          // P3 "retomaría" uno bloqueado: no debe dejar todo en silencio
+  igual(c()[conAudio()] && c()[conAudio()].dataset.linea.slice(-11), 'p0000000002', 'sigue sonando en P3');
+});
+prueba('el audio no se pierde: si el que suena resulta bloqueado, pasa al siguiente que puede sonar', async () => {
+  cambiarLista('P2'); await espera(300);
+  const antes = conAudio();
+  w.marcarCaido(c()[antes], 150);
+  cierto(conAudio() !== -1 && conAudio() !== antes, 'otro tiene el audio');
+  cierto(/el audio pasa a/.test(d.getElementById('indicador').textContent));
+});
+prueba('historial de audio: anota qué acción cambió el audio', async () => {
+  const h = () => w.eval('historialAudio').map(x => x.causa);
+  cierto(h().some(x => /bloqueado fuera de YouTube/.test(x)), JSON.stringify(h().slice(0, 3)));
+  tecla('m');                                       // silenciar todo
+  cierto(/silenciar todo/.test(h()[0]), h()[0]);
+  tecla('m');
+  w.eval('config.listas["P4"] = ["https://www.youtube.com/watch?v=p0000000044"]; delete config.ultimos["lista:P4"]');
+  w.pintarSelector();
+  cambiarLista('P4'); await espera(300);            // P4 no tiene el que sonaba ni un "último" que retomar
+  cierto(h().some(x => /no está en la lista nueva/.test(x)), JSON.stringify(h().slice(0, 3)));
+  tecla('e');
+  cierto(d.querySelectorAll('#estadoAudioLista div').length > 0, 'se ve en el panel de estado');
+  tecla('Escape');
+  cambiarLista('A'); await espera(1500);
+});
 prueba('quitar los que no funcionan: se comentan con motivo y se reconocen como descartados', () => {
   w.eval('config.listas["Z"] = ["https://www.youtube.com/watch?v=zzzzzzzzzzz", "https://www.youtube.com/watch?v=yyyyyyyyyyy"]; config.actual = "Z"');
   w.render(true);
