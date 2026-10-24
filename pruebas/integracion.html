@@ -77,6 +77,26 @@ prueba('silenciar todo (M) silencia al instante, también los canales de TV', as
   igual(v.muted, true, 'el vigilante lo vuelve a silenciar');
   cambiarLista('A'); await espera(1500);
 });
+prueba('pasando rápido por canales, solo suena el que estás viendo (los que cargaban no suenan después)', async () => {
+  w.eval('config.listas["R"] = ["https://tv.invalid/r1.m3u8", "https://tv.invalid/r2.m3u8", "https://tv.invalid/r3.m3u8"]; ' +
+         'config.actual = "R"; config.fade = 3');
+  w.pintarSelector(); w.render(true); await espera(1500);
+  const v = i => c()[i].querySelector('video.tv');
+  // Ninguno llegó a reproducir (cargando): al pasar al siguiente, el anterior queda mudo al instante, sin fundido
+  w.alternarAudio(c()[0]);
+  w.alternarAudio(c()[1]);
+  igual([v(0).muted, !!c()[0]._rampa], [true, false], 'el que cargaba quedó mudo al tiro');
+  // Si el anterior sí se oía, baja con fundido...
+  c()[1]._listo = true; c()[1]._estado = 1; c()[1].classList.remove('cargando-tv', 'caido', 'esperando');
+  w.alternarAudio(c()[2]);
+  cierto(c()[1]._rampa, 'el que se oía baja con fundido');
+  // ...pero si sigues pasando, ese fundido se corta en seco
+  w.alternarAudio(c()[0]);
+  igual([v(1).muted, !!c()[1]._rampa], [true, false], 'el fundido anterior se cortó');
+  igual(c().filter(x => x.dataset.mute === '0').length, 1, 'uno solo tiene el audio');
+  w.eval('config.fade = 0');
+  cambiarLista('A'); await espera(1500);
+});
 prueba('teclas 1 a 9 van a ese video', () => {
   tecla('3'); igual(conAudio(), 2);
   tecla('9'); cierto(/No hay un video 9/.test(d.getElementById('indicador').textContent));

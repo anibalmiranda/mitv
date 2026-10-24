@@ -89,6 +89,20 @@ function fijarAudio(celda, silenciar, fadeMs) {
 }
 // Los que pueden recibir el audio: con reproductor y no bloqueados por su dueño (externos.js)
 function puedeSonar(celda) { return !!celda.querySelector(SEL_REPRODUCTOR) && !celda._externo; }
+// ¿Se está oyendo de verdad? (cargado y reproduciendo: no en cola, cargando, caído ni en pausa)
+function seEstaOyendo(c) {
+  return !!c._listo && c._estado === 1 && !c.classList.contains('esperando') &&
+         !c.classList.contains('cargando-tv') && !c.classList.contains('caido');
+}
+// Corta en seco un fundido de salida que venía en curso
+function cortarFundido(c) {
+  detenerRampa(c);
+  const f = c.querySelector(SEL_REPRODUCTOR);
+  comandoYT(f, 'setVolume', [0]);
+  comandoYT(f, 'mute');
+  if (config.modoAudio) comandoYT(f, 'pauseVideo');
+  c._vol = 0;
+}
 function alternarAudio(celda) {
   if (!puedeSonar(celda)) {   // cámara o video bloqueado fuera de YouTube: el que sonaba sigue sonando
     if (celda._externo) mostrarMensaje('🔒 Este video solo se puede ver en YouTube: usa "▶ Ver en YouTube"');
@@ -96,9 +110,16 @@ function alternarAudio(celda) {
   }
   if (celda.dataset.mute === '1') {
     const ms = Math.max(0, Number(config.fade) || 0) * 1000;
-    // El fundido se aplica solo al pasar el audio de un video a otro
-    const habiaOtro = celdas.some(o => o !== celda && o.dataset.mute === '0');
-    celdas.forEach(otra => { if (otra !== celda && otra.dataset.mute === '0') fijarAudio(otra, true, ms); });
+    // El fundido se aplica solo al pasar el audio de uno que de verdad se estaba oyendo a otro
+    const habiaOtro = celdas.some(o => o !== celda && o.dataset.mute === '0' && seEstaOyendo(o));
+    celdas.forEach(otra => {
+      if (otra === celda) return;
+      // Si aún cargaba (sobre todo los canales de TV, que tardan), silencio al tiro: con fundido, al terminar de
+      // cargar empezaba a sonar aunque ya estuvieras en otro canal
+      if (otra.dataset.mute === '0') fijarAudio(otra, true, seEstaOyendo(otra) ? ms : 0);
+      // Venía bajando de un cambio anterior (pasando rápido por varios): se corta, para que no se junten audios
+      else if (otra._rampa) cortarFundido(otra);
+    });
     fijarAudio(celda, false, habiaOtro ? ms : 0);
   } else {
     fijarAudio(celda, true);
