@@ -97,6 +97,38 @@ prueba('pasando rápido por canales, solo suena el que estás viendo (los que ca
   w.eval('config.fade = 0');
   cambiarLista('A'); await espera(1500);
 });
+prueba('TV más rápida: calidad baja al partir, tiempos cortos y la dirección que funcionó primero', async () => {
+  const P = 'https://tv.invalid/principal.m3u8', R = 'https://tv.invalid/respaldo.m3u8';
+  w.eval('config.listas["V"] = ["' + P + '"]; config.tv[clave("' + P + '")] = { nombre: "Canal", respaldos: ["' + R + '"], preferida: "' + R + '" }; ' +
+         'config.actual = "V"');
+  w.eval('window._probadas = []; window._iniciarTvOrig = iniciarTv; ' +
+         'iniciarTv = function (cel, v, u, ex) { _iniciarTvOrig(cel, v, u, ex); _probadas.push(cel._urlTv); }');
+  w.pintarSelector(); w.render(true); await espera(200);
+  w.eval('iniciarTv = _iniciarTvOrig');
+  const t = c()[0];
+  igual(w._probadas[0], R, 'parte por la dirección que funcionó la vez anterior');
+  if (t._hls) {
+    igual(t._hls.config.startLevel, 0, 'arranca en la calidad más baja');
+    igual(t._hls.config.manifestLoadingTimeOut, 6000, 'abandona antes una dirección muerta');
+  }
+  // Cuando una dirección funciona, se recuerda (aquí: la principal)
+  t._urlTv = P; t._listo = false;
+  t.querySelector('video.tv').dispatchEvent(new w.Event('playing'));
+  igual(w.eval('config.tv[clave("' + P + '")].preferida'), undefined, 'si funcionó la principal, ya no hay preferida');
+  cambiarLista('A'); await espera(1500);
+});
+prueba('modo liviano: con uno ampliado, el anterior y el siguiente quedan precargados', async () => {
+  const L = ['n1', 'n2', 'n3', 'n4', 'n5'].map(x => 'https://www.youtube.com/watch?v=' + x.padEnd(11, '0'));
+  w.eval('config.listas["N"] = ' + JSON.stringify(L) + '; config.actual = "N"; config.maxActivos = 1');
+  w.pintarSelector(); w.render(true); await espera(300);
+  w.alternarMax(c()[2]);
+  await espera(800);
+  const despiertos = c().map(x => !x.classList.contains('dormida'));
+  igual(despiertos, [false, true, true, true, false], 'el ampliado (3) y sus vecinos (2 y 4) cargados; el resto duerme');
+  w.restaurarTodo();
+  w.eval('config.maxActivos = 0');
+  cambiarLista('A'); await espera(1500);
+});
 prueba('teclas 1 a 9 van a ese video', () => {
   tecla('3'); igual(conAudio(), 2);
   tecla('9'); cierto(/No hay un video 9/.test(d.getElementById('indicador').textContent));

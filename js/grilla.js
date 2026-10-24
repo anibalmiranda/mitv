@@ -328,16 +328,24 @@ function celdasActivas() {
                                                   c.classList.contains('max') || (fundido && fundido.nueva === c)));
   const limite = Number(config.maxActivos) || 0;
   if (!limite || videos.length <= limite) return new Set(videos);
+  // Con uno ampliado, el anterior y el siguiente quedan precargados (las flechas y el carrusel cambian sin espera)
+  const vecinos = vecinosDelAmpliado();
   const activas = new Set(videos.filter(c => c.dataset.mute === '0' || c.dataset.pendiente ||
-                                              c.classList.contains('max') || c._despierta));
+                                              c.classList.contains('max') || c._despierta || vecinos.has(c)));
   for (const c of videos) { if (activas.size >= limite) break; activas.add(c); }
   return activas;
+}
+function vecinosDelAmpliado() {
+  if (!contenedor.querySelector('.celda.max')) return new Set();
+  return new Set([...(vecinosActivos() || [])].filter(c => c.querySelector(SEL_REPRODUCTOR)));
 }
 function actualizarCarga() {
   const activas = celdasActivas();
   celdas.forEach(c => { if (c.querySelector(SEL_REPRODUCTOR) && !activas.has(c)) dormirCelda(c); });
   const pendientes = celdas.filter(c => { const f = c.querySelector(SEL_REPRODUCTOR); return f && f.dataset.src && activas.has(c); });
-  const prioridad = c => (c.dataset.pendiente || c.dataset.mute === '0') ? 0 : 1;
+  // Primero el que suena, después el ampliado y sus vecinos (precarga), después el resto en orden
+  const vecinos = vecinosDelAmpliado();
+  const prioridad = c => (c.dataset.pendiente || c.dataset.mute === '0') ? 0 : (c.classList.contains('max') || vecinos.has(c)) ? 1 : 2;
   colaCarga = pendientes.sort((a, b) => prioridad(a) - prioridad(b));   // sort estable: el resto queda en orden
   // Si ya venía cargando, se respeta el ritmo; si no, la primera tanda parte al tiro
   const enCurso = !!timerCarga;

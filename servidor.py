@@ -19,10 +19,12 @@
 # ("mudanza", ver sincronizar.js) y te lleva a la dirección nueva.
 
 import html
+import http.client
 import json
 import os
 import queue
 import re
+import ssl
 import sys
 import threading
 import time
@@ -254,6 +256,60 @@ def reescribir_lista_hls(texto, base):
         else:
             salida.append(linea)
     return '\n'.join(salida) + '\n'
+
+
+# ---------- Conexiones reutilizables para el intermediario de TV ----------
+# Un canal pide un trozo de video cada pocos segundos: abrir una conexión nueva (y su cifrado HTTPS) para cada uno
+# era lo más lento del intermediario. Aquí las conexiones con cada servidor de canal se guardan y se reutilizan.
+MAX_CONEXIONES_POR_EQUIPO = 4
+_conexiones = {}                 # (esquema, equipo) → conexiones libres
+_conexiones_lock = threading.Lock()
+_ssl = ssl.create_default_context()
+
+
+def _conexion(esquema, equipo):
+    with _conexiones_lock:
+        libres = _conexiones.get((esquema, equipo))
+        if libres:
+            return libres.pop()
+    if esquema == 'https':
+        return http.client.HTTPSConnection(equipo, timeout=20, context=_ssl)
+    return http.client.HTTPConnection(equipo, timeout=20)
+
+
+def _devolver_conexion(esquema, equipo, con, respuesta):
+    """La conexión vuelve al pozo solo si quedó lista para otro pedido."""
+    if respuesta.will_close or not respuesta.isclosed():
+        con.close()
+        return
+    with _conexiones_lock:
+        libres = _conexiones.setdefault((esquema, equipo), [])
+        if len(libres) < MAX_CONEXIONES_POR_EQUIPO:
+            libres.append(con)
+            return
+    con.close()
+
+
+def pedir_reutilizando(url, saltos=3):
+    """GET con conexiones reutilizables (y siguiendo redirecciones). Devuelve (con, respuesta, esquema, equipo, url_final)."""
+    p = urllib.parse.urlsplit(url)
+    ruta = (p.path or '/') + ('?' + p.query if p.query else '')
+    cabeceras = {'User-Agent': CABECERAS_YT['User-Agent'], 'Accept': '*/*', 'Connection': 'keep-alive'}
+    for intento in (1, 2):   # una conexión guardada puede haberse cerrado: se reintenta con una nueva
+        con = _conexion(p.scheme, p.netloc)
+        try:
+            con.request('GET', ruta, headers=cabeceras)
+            r = con.getresponse()
+            break
+        except (http.client.HTTPException, OSError):
+            con.close()
+            if intento == 2:
+                raise
+    if r.status in (301, 302, 303, 307, 308) and r.getheader('Location') and saltos > 0:
+        r.read()
+        _devolver_conexion(p.scheme, p.netloc, con, r)
+        return pedir_reutilizando(urllib.parse.urljoin(url, r.getheader('Location')), saltos - 1)
+    return con, r, p.scheme, p.netloc, url
 
 
 # ---------- Salud de la lectura de YouTube ----------
@@ -674,24 +730,45 @@ class Manejador(SimpleHTTPRequestHandler):
         if not re.match(r'^https?://', url_hls, re.IGNORECASE):
             return self.responder(400, {'error': 'falta la dirección del canal (http:// o https://)'})
         try:
-            req = urllib.request.Request(url_hls, headers={'User-Agent': CABECERAS_YT['User-Agent']})
-            with urllib.request.urlopen(req, timeout=20) as r:
-                tipo = r.headers.get('Content-Type') or 'application/octet-stream'
-                datos = r.read(64 * 1024 * 1024)
-                base = r.geturl()
-        except urllib.error.HTTPError as e:
-            return self.responder(e.code, {'error': 'el canal respondió %d' % e.code})
-        except (urllib.error.URLError, OSError, ValueError):
+            con, r, esquema, equipo, base = pedir_reutilizando(url_hls)
+        except (http.client.HTTPException, OSError, ValueError):
             return self.responder(502, {'error': 'el canal no responde'})
-        if 'mpegurl' in tipo.lower() or datos[:7] == b'#EXTM3U':
-            datos = reescribir_lista_hls(datos.decode('utf-8', 'replace'), base).encode('utf-8')
-            tipo = 'application/vnd.apple.mpegurl'
-        self.send_response(200)
-        self.send_header('Content-Type', tipo)
-        self.send_header('Cache-Control', 'no-store')
-        self.send_header('Content-Length', str(len(datos)))
-        self.end_headers()
-        self.wfile.write(datos)
+        if r.status >= 400:
+            r.read()
+            _devolver_conexion(esquema, equipo, con, r)
+            return self.responder(r.status, {'error': 'el canal respondió %d' % r.status})
+        tipo = r.getheader('Content-Type') or 'application/octet-stream'
+        es_lista = 'mpegurl' in tipo.lower() or '.m3u8' in urllib.parse.urlsplit(base).path.lower()
+        try:
+            if es_lista:
+                # Las listas son chicas: se leen enteras para cambiar sus direcciones por las de este servidor
+                datos = r.read(MAX_LISTA_HLS)
+                _devolver_conexion(esquema, equipo, con, r)
+                if datos[:7] == b'#EXTM3U':
+                    datos = reescribir_lista_hls(datos.decode('utf-8', 'replace'), base).encode('utf-8')
+                    tipo = 'application/vnd.apple.mpegurl'
+                self.send_response(200)
+                self.send_header('Content-Type', tipo)
+                self.send_header('Cache-Control', 'no-store')
+                self.send_header('Content-Length', str(len(datos)))
+                self.end_headers()
+                self.wfile.write(datos)
+                return
+            # Trozos de video: se van entregando a medida que llegan (no se espera el trozo completo)
+            self.send_response(200)
+            self.send_header('Content-Type', tipo)
+            self.send_header('Cache-Control', 'no-store')
+            if r.getheader('Content-Length'):
+                self.send_header('Content-Length', r.getheader('Content-Length'))
+            self.end_headers()
+            while True:
+                trozo = r.read(65536)
+                if not trozo:
+                    break
+                self.wfile.write(trozo)
+            _devolver_conexion(esquema, equipo, con, r)
+        except (http.client.HTTPException, OSError):
+            con.close()   # la página dejó de pedirlo (p. ej. cambió de canal) o el canal se cortó
 
     def entregar_camara(self, url_camara):
         if not re.match(r'^https?://', url_camara, re.IGNORECASE):

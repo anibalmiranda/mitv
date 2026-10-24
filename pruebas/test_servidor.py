@@ -208,19 +208,32 @@ class CanalesHLS(unittest.TestCase):
         '/geo/seg.ts': (403, ''),                        # la lista sí, el video no (como los "GEO")
         '/drm/maestra.m3u8': (200, '#EXTM3U\n#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://x",KEYFORMAT="com.apple.streamingkeydelivery"\n#EXTINF:6,\nseg.ts\n'),
         '/html/maestra.m3u8': (200, '<html>no soy una lista</html>'),
+        '/redir.m3u8': (302, ''),                        # redirige a /ok/maestra.m3u8
     }
+    conexiones = 0                                       # conexiones TCP que recibió el servidor falso
 
     @classmethod
     def setUpClass(cls):
         from http.server import BaseHTTPRequestHandler
         rutas = cls.RUTAS
 
+        clase = cls
+
         class Falso(BaseHTTPRequestHandler):
+            protocol_version = 'HTTP/1.1'                # conexiones que se pueden reutilizar
+
+            def setup(self):
+                clase.conexiones += 1
+                super().setup()
+
             def do_GET(self):
                 codigo, cuerpo = rutas.get(self.path, (404, ''))
                 self.send_response(codigo)
                 if self.path.startswith('/ok/'):
                     self.send_header('Access-Control-Allow-Origin', '*')
+                if self.path == '/redir.m3u8':
+                    self.send_header('Location', '/ok/maestra.m3u8')
+                self.send_header('Content-Length', str(len(cuerpo)))
                 self.end_headers()
                 self.wfile.write(cuerpo.encode())
 
@@ -231,10 +244,44 @@ class CanalesHLS(unittest.TestCase):
         cls.base = 'http://127.0.0.1:%d' % cls.falso.server_address[1]
         threading.Thread(target=cls.falso.serve_forever, daemon=True).start()
 
+        # El intermediario de verdad (servidor.py) en otro puerto libre
+        servidor.Manejador.log_message = lambda *a: None
+        cls.mitv = ThreadingHTTPServer(('127.0.0.1', 0), servidor.Manejador)
+        servidor.Manejador.puerto = cls.mitv.server_address[1]
+        threading.Thread(target=cls.mitv.serve_forever, daemon=True).start()
+
     @classmethod
     def tearDownClass(cls):
         cls.falso.shutdown()
         cls.falso.server_close()
+        cls.mitv.shutdown()
+        cls.mitv.server_close()
+
+    def por_intermediario(self, ruta):
+        import urllib.parse
+        c = http.client.HTTPConnection('127.0.0.1', servidor.Manejador.puerto, timeout=10)
+        c.request('GET', '/api/hls?url=' + urllib.parse.quote(self.base + ruta, safe=''),
+                  headers={'Host': '127.0.0.1:%d' % servidor.Manejador.puerto})
+        r = c.getresponse()
+        cuerpo = r.read()
+        c.close()
+        return r.status, cuerpo.decode('utf-8', 'replace')
+
+    def test_intermediario_reescribe_listas_y_entrega_video(self):
+        import urllib.parse
+        st, cuerpo = self.por_intermediario('/ok/maestra.m3u8')
+        self.assertEqual(st, 200)
+        self.assertIn('/api/hls?url=' + urllib.parse.quote(self.base + '/ok/calidad.m3u8', safe=''), cuerpo)
+        st, cuerpo = self.por_intermediario('/redir.m3u8')       # sigue la redirección y reescribe desde la final
+        self.assertIn(urllib.parse.quote(self.base + '/ok/calidad.m3u8', safe=''), cuerpo)
+        self.assertEqual(self.por_intermediario('/ok/nuevo.ts'), (200, 'x' * 100))
+        self.assertEqual(self.por_intermediario('/geo/seg.ts')[0], 403)   # los errores pasan tal cual
+
+    def test_intermediario_reutiliza_la_conexion(self):
+        antes = CanalesHLS.conexiones
+        for _ in range(4):
+            self.assertEqual(self.por_intermediario('/ok/nuevo.ts')[0], 200)
+        self.assertLessEqual(CanalesHLS.conexiones - antes, 1, 'cuatro trozos, una sola conexión con el canal')
 
     def test_canal_que_funciona_y_con_permiso_directo(self):
         self.assertEqual(servidor.revisar_hls(self.base + '/ok/maestra.m3u8'), {'estado': 'ok', 'cors': True})

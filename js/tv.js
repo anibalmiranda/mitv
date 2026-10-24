@@ -40,6 +40,7 @@ function crearTv(celda, item) {
     if (celda.classList.contains('caido')) quitarCaido(celda);
     if (!celda._listo) {
       celda._listo = true;
+      recordarTvQueFunciono(celda);
       // Si este canal tiene el audio (y ya hubo un clic), suena con su volumen
       if (celda.dataset.mute === '0' && huboGesto && !fondoActivo) { v.muted = false; v.volume = volumenDe(celda) / 100; }
       if (celda._pausadaFS || (config.modoAudio && celda.dataset.mute === '1')) v.pause();
@@ -50,16 +51,43 @@ function crearTv(celda, item) {
   return v;
 }
 
-function iniciarTv(celda, video, url) {
+// Las direcciones del canal en el orden en que se prueban: primero la que funcionó la última vez (preferida)
+function urlsTv(celda) {
+  const t = infoTv(celda.dataset.linea) || {};
+  const urls = [celda.dataset.linea].concat(t.respaldos || []);
+  return t.preferida && urls.includes(t.preferida) ? [t.preferida].concat(urls.filter(u => u !== t.preferida)) : urls;
+}
+// Funcionó: se recuerda con qué dirección y si fue a través del servidor, para partir directo así la próxima vez
+function recordarTvQueFunciono(celda) {
+  const k = clave(celda.dataset.linea);
+  const t = config.tv[k] || (config.tv[k] = {});
+  const preferida = celda._urlTv === celda.dataset.linea ? undefined : celda._urlTv;
+  const proxy = !!(t.proxy || celda._tvProxy);
+  if (t.preferida === preferida && !!t.proxy === proxy) return;
+  if (preferida) t.preferida = preferida; else delete t.preferida;
+  t.proxy = proxy;
+  guardar();
+}
+
+// exacta = true: probar justo esa dirección (los reintentos); si no, la primera carga parte por la que funcionó antes
+function iniciarTv(celda, video, url, exacta) {
   detenerTv(celda, video);
+  if (!exacta && url === celda.dataset.linea) url = urlsTv(celda)[0];
   celda._urlTv = url;
   celda.classList.add('cargando-tv');
   const t = infoTv(celda.dataset.linea) || {};
   const porServidor = (t.proxy || celda._tvProxy) && servidorOk !== false;
   const fuente = porServidor ? '/api/hls?url=' + encodeURIComponent(url) : url;
   if (window.Hls && Hls.isSupported()) {
-    // capLevelToPlayerSize: un cuadro chico pide una calidad chica (ahorra conexión); el ampliado, la mejor
-    const h = new Hls({ capLevelToPlayerSize: true, maxBufferLength: 20, liveSyncDurationCount: 3 });
+    // - startLevel 0: parte en la calidad más baja (la primera imagen llega antes) y sube sola después
+    // - capLevelToPlayerSize: un cuadro chico no pide más calidad de la que muestra (ahorra conexión)
+    // - tiempos de espera cortos: una dirección muerta se abandona pronto y se pasa al respaldo
+    const h = new Hls({
+      startLevel: 0, capLevelToPlayerSize: true, maxBufferLength: 20, liveSyncDurationCount: 3,
+      manifestLoadingTimeOut: 6000, manifestLoadingMaxRetry: 1,
+      levelLoadingTimeOut: 6000, levelLoadingMaxRetry: 1,
+      fragLoadingTimeOut: 12000, fragLoadingMaxRetry: 2
+    });
     h.on(Hls.Events.ERROR, (ev, data) => { if (data.fatal) errorTv(celda, video, data); });
     h.loadSource(fuente);
     h.attachMedia(video);
@@ -89,15 +117,14 @@ function errorTv(celda, video, data) {
   const codigo = data.response && data.response.code;
   if (!celda._tvProxy && servidorOk === true && !(infoTv(celda.dataset.linea) || {}).proxy) {
     celda._tvProxy = true;   // quizás el navegador no podía leerlo directo (CORS): se prueba a través del servidor
-    iniciarTv(celda, video, celda._urlTv);
+    iniciarTv(celda, video, celda._urlTv, true);
     return;
   }
-  const t = infoTv(celda.dataset.linea);
-  const urls = [celda.dataset.linea].concat((t && t.respaldos) || []);
+  const urls = urlsTv(celda);
   const sig = urls[urls.indexOf(celda._urlTv) + 1];
   if (sig) {
     celda._tvProxy = false;
-    iniciarTv(celda, video, sig);
+    iniciarTv(celda, video, sig, true);
     return;
   }
   detenerTv(celda, video);

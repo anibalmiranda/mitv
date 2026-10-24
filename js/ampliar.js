@@ -28,6 +28,7 @@ function pintarAmpliado() {
   document.body.classList.toggle('con-ampliado', hay);
   if (!hay && !document.fullscreenElement) cerrarTira();
   pintarNombreAmpliado();
+  if (hay) programarCarga();   // precarga el anterior y el siguiente del ampliado
 }
 // Rótulo abajo a la derecha con el nombre del canal ampliado (doble clic o pantalla completa); se pone al día al
 // cambiar de canal (flechas, tira, carrusel) y cuando el reproductor informa el título.
