@@ -33,11 +33,12 @@ function abrirMover(celda) {
   const nueva = document.createElement('option');
   nueva.value = NUEVA_LISTA;
   nueva.textContent = '＋ Nueva lista…';
-  sel.appendChild(nueva);
-  // Por defecto, una lista del mismo grupo (p. ej. otra sub-lista de "TV")
+  sel.insertBefore(nueva, sel.firstChild);   // primera, para que se vea
+  // Por defecto, una lista del mismo grupo (p. ej. otra sub-lista de "TV"); si no, la primera que exista
   const g = config.vistaFav ? '' : grupoDe(config.actual);
-  const mismoGrupo = g && [...sel.options].find(o => grupoDe(o.value) === g);
-  sel.value = mismoGrupo ? mismoGrupo.value : sel.options[0].value;
+  const opciones = [...sel.options].filter(o => o.value !== NUEVA_LISTA);
+  const mismoGrupo = g && opciones.find(o => grupoDe(o.value) === g);
+  sel.value = mismoGrupo ? mismoGrupo.value : (opciones[0] ? opciones[0].value : NUEVA_LISTA);
   $('moverNueva').value = '';
   pintarMoverNueva();
   $('btnMoverMover').hidden = config.vistaFav;   // desde favoritos solo se copia
@@ -45,7 +46,21 @@ function abrirMover(celda) {
   fondoMover.classList.add('abierto');
 }
 function cerrarMover() { fondoMover.classList.remove('abierto'); celdaMover = null; }
-function pintarMoverNueva() { $('moverNueva').hidden = $('moverDestino').value !== NUEVA_LISTA; }
+// Al elegir "Nueva lista": aparece el nombre, propuesto dentro del mismo grupo ("TV / ") si estás en una sub-lista
+function pintarMoverNueva() {
+  const campo = $('moverNueva');
+  const esNueva = $('moverDestino').value === NUEVA_LISTA;
+  campo.hidden = !esNueva;
+  $('btnMoverNueva').hidden = esNueva;
+  if (esNueva && !campo.value) {
+    const g = config.vistaFav ? '' : grupoDe(config.actual);
+    campo.value = g ? g + ' / ' : '';
+  }
+  if (esNueva && fondoMover.classList.contains('abierto')) setTimeout(() => { campo.focus(); campo.setSelectionRange(campo.value.length, campo.value.length); }, 0);
+}
+$('btnMoverNueva').addEventListener('click', () => { $('moverDestino').value = NUEVA_LISTA; pintarMoverNueva(); });
+// Enter en el nombre = Mover (o Copiar desde favoritos)
+$('moverNueva').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); moverOCopiar(!config.vistaFav); } });
 
 function moverOCopiar(mover) {
   const celda = celdaMover;

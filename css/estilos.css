@@ -683,3 +683,17 @@ body.modo-audio .celda.camara .mover { right: 138px; }
 }
 #nombreAmpliado.visible { display: block; }
 body.tira-abierta #nombreAmpliado, body.solo-visual #nombreAmpliado { display: none; }
+
+/* Canal de TV conectándose: "⏳ Cargando canal…" al centro hasta la primera imagen (tv.js) */
+.celda .carga-tv {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2;
+  display: none; align-items: center; gap: 10px; pointer-events: none;
+  background: rgba(0,0,0,.6); color: #e8e8ea; font-size: 13px; padding: 8px 14px; border-radius: 8px;
+}
+.celda.cargando-tv:not(.caido):not(.esperando) .carga-tv { display: flex; }
+.carga-tv .ruedita {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.25); border-top-color: #fff; animation: girarCarga .8s linear infinite;
+}
+@keyframes girarCarga { to { transform: rotate(360deg); } }
+body.modo-audio .celda .carga-tv { display: none; }

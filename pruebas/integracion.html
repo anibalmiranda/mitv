@@ -239,6 +239,7 @@ prueba('canal de TV: un <video> en la grilla, sin audio para la cámara de al la
   const t = c()[0];
   igual(t.dataset.tipo, 'hls');
   cierto(t.querySelector('video.tv'), 'tiene un reproductor de video');
+  cierto(t.querySelector('.carga-tv'), 'tiene el aviso "Cargando canal…"');
   cierto(t.classList.contains('en-vivo'));
   igual(w.puedeSonar(t), true, 'un canal de TV sí puede recibir el audio');
   igual(c().length, 1, 'la línea descartada (comentada) no aparece en la grilla');
@@ -311,6 +312,16 @@ prueba('mover y copiar un cuadro a otra lista (sin duplicar)', async () => {
   d.getElementById('btnMoverCopiar').click();
   igual(w.eval('config.listas["Grupo X / Nueva"]'), ['https://www.youtube.com/watch?v=mmmmmmmmmm2']);
   igual(w.eval('config.listas.M1').length, 1, 'copiar lo deja en la original');
+  // Botón "＋ Crear lista nueva": propone el nombre dentro del grupo actual y Enter mueve
+  cambiarLista('Grupo X / Nueva'); await espera(300);
+  c()[0].querySelector('.mover').click();
+  igual(d.getElementById('moverDestino').options[0].value, '__nueva__', '"Nueva lista" es la primera opción');
+  d.getElementById('btnMoverNueva').click();
+  igual(d.getElementById('moverNueva').value, 'Grupo X / ', 'propone el mismo grupo');
+  d.getElementById('moverNueva').value = 'Grupo X / Otra';
+  d.getElementById('moverNueva').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  igual(w.eval('config.listas["Grupo X / Otra"]'), ['https://www.youtube.com/watch?v=mmmmmmmmmm2'], 'creada y movido con Enter');
+  igual(w.eval('config.listas["Grupo X / Nueva"]'), [], 'salió de la anterior');
   cambiarLista('A');
 });
 prueba('el audio no se pierde: el que suena sigue al cambiar a una lista que también lo tiene', async () => {

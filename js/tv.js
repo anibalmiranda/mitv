@@ -24,9 +24,15 @@ function crearTv(celda, item) {
   const t = infoTv(item.id);
   if (t && t.logo) celda.dataset.thumb = t.logo;
   celda.classList.add('en-vivo');   // la TV siempre es en vivo
+  // "⏳ Cargando canal…" al centro mientras se conecta (y si se queda pegado cargando); se quita con la primera imagen
+  const aviso = document.createElement('div');
+  aviso.className = 'carga-tv';
+  aviso.innerHTML = '<span class="ruedita"></span><span>Cargando canal…</span>';
+  celda.appendChild(aviso);
+  v.addEventListener('waiting', () => { if (celda._hls || v.getAttribute('src')) celda.classList.add('cargando-tv'); });
   v.addEventListener('playing', () => {
     celda._estado = 1;
-    celda.classList.remove('pausado');
+    celda.classList.remove('pausado', 'cargando-tv');
     if (celda.classList.contains('caido')) quitarCaido(celda);
     if (!celda._listo) {
       celda._listo = true;
@@ -35,7 +41,7 @@ function crearTv(celda, item) {
       if (celda._pausadaFS || (config.modoAudio && celda.dataset.mute === '1')) v.pause();
     }
   });
-  v.addEventListener('pause', () => { celda._estado = 2; celda.classList.add('pausado'); });
+  v.addEventListener('pause', () => { celda._estado = 2; celda.classList.add('pausado'); celda.classList.remove('cargando-tv'); });
   v.addEventListener('ended', () => { celda._estado = 0; });
   return v;
 }
@@ -43,6 +49,7 @@ function crearTv(celda, item) {
 function iniciarTv(celda, video, url) {
   detenerTv(celda, video);
   celda._urlTv = url;
+  celda.classList.add('cargando-tv');
   const t = infoTv(celda.dataset.linea) || {};
   const porServidor = (t.proxy || celda._tvProxy) && servidorOk !== false;
   const fuente = porServidor ? '/api/hls?url=' + encodeURIComponent(url) : url;
@@ -65,6 +72,7 @@ function detenerTv(celda, video) {
   if (celda._hls) { celda._hls.destroy(); celda._hls = null; }
   if (video) { video.removeAttribute('src'); video.load(); }
   celda._listo = false;
+  celda.classList.remove('cargando-tv');
 }
 
 // Algo falló sin remedio: primero a través del servidor, después la siguiente dirección de respaldo
