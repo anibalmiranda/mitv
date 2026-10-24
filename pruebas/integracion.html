@@ -78,6 +78,25 @@ prueba('ampliar, navegar y volver a la grilla', () => {
   w.navegar(1); cierto(c()[2].classList.contains('max'), 'la flecha pasa al siguiente');
   w.restaurarTodo(); igual(c().filter(x => x.classList.contains('max')).length, 0);
 });
+prueba('ampliado (doble clic) sin pantalla completa: barras de navegación, tira y flechas', () => {
+  const nav = () => w.getComputedStyle(d.getElementById('navPrev')).display;
+  igual(nav(), 'none', 'en la grilla no se ven');
+  c()[0].querySelector('.capa-audio').dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
+  cierto(c()[0].classList.contains('max'), 'el doble clic lo amplía');
+  cierto(d.body.classList.contains('con-ampliado'));
+  igual(nav(), 'flex', 'aparecen las barras ‹ ›');
+  igual(w.getComputedStyle(d.getElementById('zonaTira')).display, 'flex', 'aparece la tira');
+  const rotulo = () => d.getElementById('nombreAmpliado');
+  cierto(rotulo().classList.contains('visible'), 'abajo aparece el nombre del canal');
+  igual(rotulo().textContent, c()[0].querySelector('.titulo').textContent);
+  tecla('ArrowRight'); cierto(c()[1].classList.contains('max'), 'la flecha pasa al siguiente');
+  igual(rotulo().textContent, c()[1].querySelector('.titulo').textContent, 'el nombre cambia con el canal');
+  tecla('ArrowDown'); cierto(d.body.classList.contains('tira-abierta'), 'flecha abajo abre la tira');
+  tecla('Escape'); cierto(!d.body.classList.contains('tira-abierta'), 'Esc cierra la tira');
+  tecla('Escape'); igual(c().filter(x => x.classList.contains('max')).length, 0, 'Esc vuelve a la grilla');
+  igual(nav(), 'none', 'y las barras desaparecen');
+  cierto(!rotulo().classList.contains('visible'), 'y el nombre también');
+});
 prueba('tira de miniaturas', () => {
   w.abrirTira(); igual(d.querySelectorAll('#tiraItems .item').length, 4, 'tres videos y la cámara');
   w.cerrarTira(); cierto(!d.body.classList.contains('tira-abierta'));

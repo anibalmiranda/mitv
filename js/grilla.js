@@ -288,6 +288,7 @@ function render(reutilizar) {
   pintarFavsBoton();
   if (pendiente) conCausa('retomar el último video de esta lista', () => prepararRetomar(pendiente, ult));
   else ocultarAvisoRetomar();
+  pintarAmpliado();   // los cuadros cambiaron: ¿quedó alguno ampliado?
   // ¿Se perdió el audio sin que nadie lo silenciara? (el que sonaba no está en la vista nueva, o se recargó todo)
   if (sonabaAntes && !sonabaAntes.isConnected && !celdas.some(c => c.dataset.mute === '0' || c.dataset.pendiente))
     anotarAudio(sonabaAntes, false, reutilizar ? 'cambio de lista: ese video no está en la lista nueva'

@@ -57,6 +57,7 @@ window.addEventListener('message', e => {
       if (celda === celdaPendiente) mostrarAvisoRetomar();
     }
     if (vd.author) celda.querySelector('.autor').textContent = vd.author;
+    if ((vd.title || vd.author) && celda.classList.contains('max')) pintarNombreAmpliado();   // el rótulo de abajo
     // Se memoriza el nombre para mostrarlo aunque el video deje de existir y para "Buscar parecido"
     if (vd.title || vd.author) {
       const vivo = typeof vd.isLive === 'boolean' ? vd.isLive : celda.classList.contains('en-vivo');

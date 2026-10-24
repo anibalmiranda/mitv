@@ -19,6 +19,26 @@ function alternarMax(celda) {
   }
   actualizarUltimoMax();
   programarPausaOcultos();
+  pintarAmpliado();
+}
+// Con un video ampliado (aunque no sea pantalla completa) se ven las barras ‹ › de navegación y la tira de abajo,
+// y las flechas del teclado navegan (body.con-ampliado); al volver a la grilla desaparecen.
+function pintarAmpliado() {
+  const hay = !!contenedor.querySelector('.celda.max');
+  document.body.classList.toggle('con-ampliado', hay);
+  if (!hay && !document.fullscreenElement) cerrarTira();
+  pintarNombreAmpliado();
+}
+// Rótulo abajo a la derecha con el nombre del canal ampliado (doble clic o pantalla completa); se pone al día al
+// cambiar de canal (flechas, tira, carrusel) y cuando el reproductor informa el título.
+function pintarNombreAmpliado() {
+  const r = $('nombreAmpliado');
+  const c = (fundido && fundido.nueva) || contenedor.querySelector('.celda.max');
+  if (!c) { r.classList.remove('visible'); return; }
+  const tit = (c.querySelector('.titulo') || {}).textContent || '';
+  const aut = (c.querySelector('.autor') || {}).textContent || '';
+  r.textContent = (c.classList.contains('en-vivo') ? '🔴 ' : '') + tit + (aut && aut !== tit ? ' — ' + aut : '');
+  r.classList.toggle('visible', !!tit);
 }
 
 // ---------- Fundido de imagen al cambiar de video ampliado ----------
@@ -37,6 +57,7 @@ function terminarFundidoImagen() {
   void nueva.offsetWidth;                        // corta la transición en curso y deja la opacidad en 1
   nueva.style.transition = '';
   programarPausaOcultos();
+  pintarNombreAmpliado();
 }
 function cambiarAmpliado(nueva) {
   terminarFundidoImagen();                       // si venía otro fundido, se completa al tiro
@@ -57,6 +78,7 @@ function cambiarAmpliado(nueva) {
   nueva.style.opacity = '1';
   fundido = { vieja, nueva, timer: setTimeout(terminarFundidoImagen, ms + 50) };
   programarPausaOcultos();   // el que entra (y sus vecinos) se despiertan al tiro
+  pintarAmpliado();
 }
 
 // ---------- Máxima resolución ----------

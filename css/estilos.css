@@ -163,7 +163,7 @@ body.modo-audio .celda .buscar { top: 50%; transform: translateY(-50%); right: 7
 .nav-btn svg { width: 34px; height: 34px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.8)); }
 #navPrev { left: 0; border-radius: 0 10px 10px 0; }
 #navNext { right: 0; border-radius: 10px 0 0 10px; }
-body.pantalla-completa .nav-btn { display: flex; }
+body.pantalla-completa .nav-btn, body.con-ampliado .nav-btn { display: flex; }   /* también con un video ampliado */
 
 /* Tira de videos estilo Netflix (solo en pantalla completa) */
 #zonaTira {
@@ -172,7 +172,7 @@ body.pantalla-completa .nav-btn { display: flex; }
   transform: translateY(calc(100% - 40px)); transition: transform .3s ease;
   pointer-events: none;
 }
-body.pantalla-completa #zonaTira { display: flex; }
+body.pantalla-completa #zonaTira, body.con-ampliado #zonaTira { display: flex; }
 body.tira-abierta #zonaTira { transform: none; }
 #btnTira {
   pointer-events: auto; width: 96px; height: 40px; border: 0; cursor: pointer;
@@ -673,3 +673,13 @@ body.modo-audio .celda.camara .mover { right: 138px; }
 #estadoAudioLista { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; max-height: 22vh; overflow-y: auto; }
 #estadoAudioLista .sonando { color: #9be7a6; }
 #estadoAudioLista .silencio { color: #ffb4b4; }
+
+/* Nombre del canal ampliado, abajo a la derecha (doble clic o pantalla completa) */
+#nombreAmpliado {
+  position: fixed; right: 1.5vw; bottom: 1vh; z-index: 16; display: none;
+  max-width: 45vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: rgba(0,0,0,.65); color: #fff; font-size: 15px; font-weight: 500;
+  padding: 5px 12px; border-radius: 6px; pointer-events: none; text-shadow: 0 1px 2px #000;
+}
+#nombreAmpliado.visible { display: block; }
+body.tira-abierta #nombreAmpliado, body.solo-visual #nombreAmpliado { display: none; }

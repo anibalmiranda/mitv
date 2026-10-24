@@ -41,8 +41,8 @@ document.addEventListener('keydown', e => {
     }
     if (/^[1-9]$/.test(k)) { e.preventDefault(); irANumero(Number(k)); }
   }
-  // Las flechas navegan solo si no estás escribiendo en un campo ni hay una ventana abierta
-  if (document.fullscreenElement && !panelAbierto && !buscarAbierto && !enCampo) {
+  // Las flechas navegan en pantalla completa o con un video ampliado (no mientras escribes ni con una ventana abierta)
+  if ((document.fullscreenElement || document.body.classList.contains('con-ampliado')) && !panelAbierto && !buscarAbierto && !enCampo) {
     if (e.key === 'ArrowRight') { e.preventDefault(); navegar(1); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); navegar(-1); }
     if (e.key === 'ArrowDown') { e.preventDefault(); abrirTira(); }
