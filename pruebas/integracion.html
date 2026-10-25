@@ -238,6 +238,27 @@ prueba('tira: flechas para recorrer todos los canales y 📌 para dejarla fija',
     cambiarLista('A'); await espera(1500);
   }
 });
+prueba('pantalla completa: menú y flechas se ocultan con el mouse quieto y vuelven al moverlo', () => {
+  Object.defineProperty(d, 'fullscreenElement', { get: () => d.documentElement, configurable: true });
+  try {
+    const mover = (x, y) => d.dispatchEvent(new w.MouseEvent('mousemove', { screenX: x, screenY: y, bubbles: true }));
+    mover(10, 10);
+    cierto(!d.body.classList.contains('ui-oculta'), 'con movimiento se ve todo');
+    w.ocultarUi();   // lo que pasa a los 10 s
+    cierto(d.body.classList.contains('ui-oculta'), 'quieto: se ocultan');
+    igual(w.getComputedStyle(d.getElementById('atrapaMouse')).display, 'block', 'la capa recibe el mouse aunque esté sobre el video');
+    mover(10, 10);
+    cierto(d.body.classList.contains('ui-oculta'), 'un aviso sin movimiento real no los muestra');
+    mover(40, 25);
+    cierto(!d.body.classList.contains('ui-oculta'), 'al mover el mouse vuelven');
+    w.abrirTira(); w.ocultarUi();
+    cierto(!d.body.classList.contains('ui-oculta'), 'con la tira abierta no se ocultan');
+    w.cerrarTira();
+  } finally {
+    delete d.fullscreenElement;
+    w.mostrarUi(); d.body.classList.remove('ui-oculta');
+  }
+});
 prueba('carrusel: inicia y se detiene', () => {
   w.iniciarCarrusel(); cierto(d.body.classList.contains('carrusel-activo'));
   w.detenerCarrusel(); cierto(!d.body.classList.contains('carrusel-activo'));

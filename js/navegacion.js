@@ -128,6 +128,7 @@ $('btnTira').addEventListener('click', alternarTira);
 function desplazarTira(dir) {
   const cont = $('tiraItems');
   cont.scrollBy({ left: dir * cont.clientWidth * 0.85 });   // suave por el CSS (scroll-behavior)
+  setTimeout(pintarFlechasTira, 450);   // por si el aviso de desplazamiento llega tarde
 }
 function pintarFlechasTira() {
   const cont = $('tiraItems');

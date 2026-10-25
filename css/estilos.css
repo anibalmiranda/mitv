@@ -169,7 +169,7 @@ body.pantalla-completa .nav-btn, body.con-ampliado .nav-btn { display: flex; }  
 #zonaTira {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 17;
   display: none; flex-direction: column; align-items: center;
-  transform: translateY(calc(100% - 40px)); transition: transform .3s ease;
+  transform: translateY(calc(100% - 40px)); transition: transform .3s ease, opacity .4s;
   pointer-events: none;
 }
 body.pantalla-completa #zonaTira, body.con-ampliado #zonaTira { display: flex; }
@@ -256,8 +256,12 @@ body.tira-abierta #btnTira svg { transform: rotate(180deg); }
 /* Barra superior */
 #barra-sup {
   position: fixed; top: 0.6vh; right: 1.5vw; z-index: 20;
-  display: flex; gap: 8px; align-items: center;
+  display: flex; gap: 8px; align-items: center; transition: opacity .4s;
 }
+/* Pantalla completa: tras 10 s con el mouse quieto se ocultan menú, flechas y pestaña de la tira (pantalla.js) */
+body.ui-oculta #barra-sup, body.ui-oculta .nav-btn, body.ui-oculta:not(.tira-abierta) #zonaTira { opacity: 0 !important; pointer-events: none !important; }
+#atrapaMouse { position: fixed; inset: 0; z-index: 40; display: none; cursor: none; }
+body.ui-oculta #atrapaMouse { display: block; }
 #barra-sup button {
   width: 3.6vh; height: 3.6vh; min-width: 30px; min-height: 30px;
   border: 0; border-radius: 50%; background: var(--panel); color: var(--texto);
