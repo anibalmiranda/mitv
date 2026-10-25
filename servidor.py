@@ -804,6 +804,16 @@ class Manejador(SimpleHTTPRequestHandler):
             super().log_message(formato, *args)
 
 
+
+class Servidor(ThreadingHTTPServer):
+    # Si el navegador corta una conexión antes de recibir la respuesta (recargaste la página, se quitó un cuadro,
+    # se cambió de canal), no es un error: se ignora en silencio en vez de llenar la consola con el detalle
+    def handle_error(self, request, client_address):
+        if isinstance(sys.exc_info()[1], (ConnectionAbortedError, ConnectionResetError, BrokenPipeError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def main():
     # Si la consola de Windows no puede mostrar algún carácter, que lo reemplace en vez de fallar
     try:
@@ -812,7 +822,7 @@ def main():
         pass
     puerto = int(sys.argv[1]) if len(sys.argv) > 1 else PUERTO_POR_DEFECTO
     Manejador.puerto = puerto
-    servidor = ThreadingHTTPServer(('127.0.0.1', puerto), Manejador)
+    servidor = Servidor(('127.0.0.1', puerto), Manejador)
     print('  Sirviendo ' + CARPETA)
     print('  Tus datos se guardan en ' + ARCHIVO_DATOS)
     threading.Thread(target=escuchar_teclas_multimedia, daemon=True).start()

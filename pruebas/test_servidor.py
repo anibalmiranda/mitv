@@ -310,6 +310,30 @@ class CanalesHLS(unittest.TestCase):
 
 
 @unittest.skipUnless(CON_INTERNET, 'solo con --internet')
+class ConexionesCortadas(unittest.TestCase):
+    """Si el navegador corta la conexión antes de la respuesta, la consola no se llena de errores."""
+
+    def anotado(self, error):
+        srv = servidor.Servidor(('127.0.0.1', 0), servidor.Manejador)
+        salida = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(salida):
+                try:
+                    raise error
+                except Exception:
+                    srv.handle_error(None, ('127.0.0.1', 1))
+        finally:
+            srv.server_close()
+        return salida.getvalue()
+
+    def test_conexion_cortada_no_se_anota(self):
+        for e in (ConnectionAbortedError(10053, 'anulada'), ConnectionResetError(), BrokenPipeError()):
+            self.assertEqual(self.anotado(e), '', type(e).__name__)
+
+    def test_otros_errores_si_se_anotan(self):
+        self.assertIn('ValueError', self.anotado(ValueError('de verdad')))
+
+
 class YouTubeDeVerdad(unittest.TestCase):
     def test_canario(self):
         servidor.revisar_salud()
