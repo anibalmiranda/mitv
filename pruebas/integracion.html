@@ -338,6 +338,38 @@ prueba('cuenta atrás: amarillo de 13 a 14 y rojo al llegar a cero', () => {
   } finally { w.Date = Real; }
   tecla('t'); cierto(!d.getElementById('cuentaAtras').classList.contains('visible'));
 });
+prueba('canal de rudo.video: iframe con su página y audio exclusivo recargándolo', async () => {
+  const R = 'https://rudo.video/live/tvn', Y = 'https://www.youtube.com/watch?v=' + 'rudoprueba1';
+  w.eval('config.listas["R"] = ' + JSON.stringify([Y, R]) + '; config.actual = "R"; config.mute = true');
+  w.pintarSelector(); w.render(true); await espera(1500);
+  try {
+    const [y, r] = c();
+    const ifr = r.querySelector('iframe');
+    cierto(r.classList.contains('rudo') && r.classList.contains('en-vivo'), 'cuadro de rudo, en vivo');
+    igual(ifr.src, R, 'carga su página oficial');
+    igual(w.getComputedStyle(r.querySelector('.volumen')).display, 'none', 'sin volumen propio');
+    // Un clic dentro de su reproductor (la ventana pierde el foco y el iframe queda activo) le da el audio
+    ifr.focus(); w.dispatchEvent(new w.Event('blur')); await espera(50);
+    if (d.activeElement === ifr) {
+      igual(r.dataset.mute, '0', 'el clic en su reproductor le da el audio');
+      cierto(r._rudoSonido, 'queda marcado como que puede sonar');
+    } else w.alternarAudio(r);
+    cierto(r._rudoSonido, 'puede sonar');
+    // El audio pasa a otro cuadro: se recarga para que su reproductor vuelva a partir silenciado
+    let recargas = 0;   // cada vez que se le vuelve a poner la dirección
+    new w.MutationObserver(m => { recargas += m.length; }).observe(ifr, { attributes: true, attributeFilter: ['src'] });
+    w.alternarAudio(y);
+    igual(r.dataset.mute, '1', 'pierde el audio');
+    cierto(!r._rudoSonido, 'ya no suena');
+    await espera(100);
+    igual(recargas, 1, 'se recargó una vez');
+    igual(ifr.src, R, 'con la misma página');
+    w.comandoYT(ifr, 'mute'); await espera(500);
+    igual(recargas, 1, 'otro "silenciar" no lo vuelve a recargar');
+  } finally {
+    cambiarLista('A'); await espera(1500);
+  }
+});
 prueba('video bloqueado fuera de YouTube (101/150): cuadro útil y sin audio', () => {
   w.marcarCaido(c()[2], 150);
   cierto(c()[2]._externo && c()[2].querySelector('.aviso-externo'));

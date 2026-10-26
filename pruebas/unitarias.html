@@ -53,6 +53,13 @@ prueba('cámaras IP: cualquier http(s) que no sea YouTube', () => {
   igual(p('http://200.54.42.127:8090/mjpg/video.mjpg'), { tipo: 'camara', id: 'http://200.54.42.127:8090/mjpg/video.mjpg' });
   igual(parsear('200.54.42.127:8090/mjpg/video.mjpg').tipo, 'error', 'sin http:// no se toma como cámara');
 });
+prueba('canales de rudo.video: su página oficial', () => {
+  igual(p('https://rudo.video/live/TVN'), { tipo: 'rudo', id: 'tvn' });
+  igual(p('rudo.video/live/t13?x=1'), { tipo: 'rudo', id: 't13' }, 'sin https y con parámetros');
+  igual(urlEmbed(parsear('https://rudo.video/live/mega'), true, true), 'https://rudo.video/live/mega');
+  igual(parsear('https://rudo.video/rudo.m3u8').tipo, 'hls', 'otras direcciones de rudo no son canales');
+  igual(nombreInicial(parsear('https://rudo.video/live/tvn'), 0), 'TVN (rudo.video)');
+});
 prueba('texto que no es URL da error con motivo', () => {
   const r = parsear('esto no es url');
   igual(r.tipo, 'error');

@@ -151,7 +151,10 @@ function render(reutilizar) {
         ifr.referrerPolicy = 'strict-origin-when-cross-origin';
         ifr.title = 'Video ' + (idx + 1);
         const id = idx;
-        ifr.addEventListener('load', () => escucharYT(ifr, id));
+        if (item.tipo === 'rudo') {   // canal de rudo.video (rudo.js): no habla con la página como YouTube
+          celda.classList.add('rudo', 'en-vivo');
+          ifr.addEventListener('load', () => rudoCargado(celda, ifr));
+        } else ifr.addEventListener('load', () => escucharYT(ifr, id));
         celda.appendChild(ifr);
       }
 
@@ -412,6 +415,7 @@ function dormirCelda(celda) {
     detenerRampa(celda);
     olvidarReproductor(celda);
     ifr.dataset.src = urlRecarga(celda);
+    celda._rudoSonido = false;
     if (ifr.tagName === 'VIDEO') detenerTv(celda, ifr);   // canal de TV: se suelta su conexión
     else ifr.src = 'about:blank';
   }

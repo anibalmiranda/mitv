@@ -39,6 +39,9 @@ function parsear(linea) {
     if (partes[0] && partes[0].startsWith('@')) return canalPorRuta(partes[0], s);
     if (['c', 'user'].includes(partes[0]) && partes[1]) return canalPorRuta(partes[0] + '/' + partes[1], s);
   }
+  // Canal de rudo.video (TVN, Mega, T13…): su página oficial en un iframe (rudo.js)
+  if (host === 'rudo.video' && partes[0] === 'live' && /^[\w-]+$/.test(partes[1] || ''))
+    return { tipo: 'rudo', id: partes[1].toLowerCase() };
   // Canal de TV por HLS: la dirección termina en .m3u8 (puede traer parámetros)
   if (/^https?:\/\//i.test(s) && /\.m3u8($|[?#])/i.test(u.pathname + u.search)) return { tipo: 'hls', id: s };
   // Cualquier otra dirección http(s):// escrita completa se toma como cámara IP (stream MJPEG o imagen)
@@ -112,6 +115,7 @@ function urlEmbed(item, muteado, autoplay) {
     }
     return 'https://www.youtube.com/embed/videoseries?' + p.toString();
   }
+  if (item.tipo === 'rudo') return 'https://rudo.video/live/' + encodeURIComponent(item.id);   // su página, sin parámetros
   return null;
 }
 
@@ -124,6 +128,7 @@ function nombreInicial(item, idx) {
   if (item.tipo === 'camara') {
     try { return 'Cámara ' + new URL(item.id).host; } catch (e) { return 'Cámara'; }
   }
+  if (item.tipo === 'rudo') return item.id.toUpperCase() + ' (rudo.video)';
   if (item.tipo === 'canal') return 'Canal en vivo ' + (item.ruta || item.id);
   if (item.tipo === 'lista') return 'Lista ' + item.id;
   return 'Video ' + (idx + 1) + ' (' + item.id + ')';

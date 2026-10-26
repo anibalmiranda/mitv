@@ -18,7 +18,7 @@ async function comprobarLinea(linea) {
   const p = parsear(linea);
   if (!p) return { ok: true };
   if (p.tipo === 'error') return p.pendiente ? { ok: true } : { ok: false, motivo: p.motivo || 'URL no reconocida' };
-  if (p.tipo === 'lista') return { ok: true };
+  if (p.tipo === 'lista' || p.tipo === 'rudo') return { ok: true };
   if (p.tipo === 'canal') {
     const d = await api('directo', { canal: p.id });
     return d.vivo ? { ok: true } : { ok: false, motivo: 'el canal no está transmitiendo' };

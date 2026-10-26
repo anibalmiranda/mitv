@@ -8,7 +8,7 @@
 <!-- Abre de antemano las conexiones con YouTube y sus miniaturas (la grilla carga más rápido) -->
 <link rel="preconnect" href="https://www.youtube.com">
 <link rel="preconnect" href="https://i.ytimg.com">
-<link rel="stylesheet" href="css/estilos.css?v=20261024i">
+<link rel="stylesheet" href="css/estilos.css?v=20261026a">
 </head>
 <body>
 
@@ -147,7 +147,7 @@
       <button class="btn peligro" id="btnEliminar">Eliminar lista</button>
       <button class="btn peligro" id="btnEliminarGrupo" hidden title="Borra todas las sub-listas de este grupo (p. ej. las de una lista de TV importada)">Eliminar grupo</button>
     </div>
-    <p id="ayudaPanel">Una URL por línea: <code>watch?v=</code>, <code>youtu.be/</code>, <code>/live/</code>, <code>/shorts/</code>, <code>/embed/</code> , canales en vivo <code>youtube.com/channel/UC…</code> o por su <code>@nombre</code> (<code>youtube.com/@nombre</code>; necesita abrir con iniciar.bat), cámaras IP (<code>http://IP:puerto/mjpg/video.mjpg</code>, sin audio), canales de TV <code>….m3u8</code> (o importa una lista M3U con 📺) y playlists (<code>playlist?list=</code> o <code>watch?v=…&amp;list=…</code>; con "Inicio aleatorio" parten en un video al azar y siguen mezcladas). Clic sobre un video le da el audio (uno a la vez). Doble clic amplía / vuelve a miniatura. Arrastra un cuadro y suéltalo sobre otro: queda justo antes de ese. ⇄ lo mueve o copia a otra lista. ☆ marca favorito (máx. 9). Las líneas que empiezan con <code>#</code> se ignoran.<br><b>Atajos:</b> <code>M</code> silenciar todo · <code>S</code> super favorito 👑 (miniatura en la esquina) · <code>T</code> cuenta atrás · <code>B</code> audio de fondo 🎵 (el audio de un video para toda la grilla) · <code>E</code> estado de la lista · <code>F</code> pantalla completa · <code>C</code> carrusel · <code>1</code>–<code>9</code> ir a ese video · <code>+</code> / <code>−</code> volumen del que suena · flechas: anterior / siguiente y tira (en pantalla completa) · <code>Esc</code> volver a la grilla · teclas multimedia ⏯ ⏭ ⏮ ⏹.</p>
+    <p id="ayudaPanel">Una URL por línea: <code>watch?v=</code>, <code>youtu.be/</code>, <code>/live/</code>, <code>/shorts/</code>, <code>/embed/</code> , canales en vivo <code>youtube.com/channel/UC…</code> o por su <code>@nombre</code> (<code>youtube.com/@nombre</code>; necesita abrir con iniciar.bat), cámaras IP (<code>http://IP:puerto/mjpg/video.mjpg</code>, sin audio), canales de TV <code>….m3u8</code> (o importa una lista M3U con 📺), canales de rudo.video (<code>rudo.video/live/tvn</code>; el sonido se activa con el 🔊 de su reproductor) y playlists (<code>playlist?list=</code> o <code>watch?v=…&amp;list=…</code>; con "Inicio aleatorio" parten en un video al azar y siguen mezcladas). Clic sobre un video le da el audio (uno a la vez). Doble clic amplía / vuelve a miniatura. Arrastra un cuadro y suéltalo sobre otro: queda justo antes de ese. ⇄ lo mueve o copia a otra lista. ☆ marca favorito (máx. 9). Las líneas que empiezan con <code>#</code> se ignoran.<br><b>Atajos:</b> <code>M</code> silenciar todo · <code>S</code> super favorito 👑 (miniatura en la esquina) · <code>T</code> cuenta atrás · <code>B</code> audio de fondo 🎵 (el audio de un video para toda la grilla) · <code>E</code> estado de la lista · <code>F</code> pantalla completa · <code>C</code> carrusel · <code>1</code>–<code>9</code> ir a ese video · <code>+</code> / <code>−</code> volumen del que suena · flechas: anterior / siguiente y tira (en pantalla completa) · <code>Esc</code> volver a la grilla · teclas multimedia ⏯ ⏭ ⏮ ⏹.</p>
     <textarea id="urls" spellcheck="false" placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX&#10;https://youtu.be/XXXXXXXXXXX&#10;https://www.youtube.com/channel/UCxxxxxxxxxxxxxxxxxxxxxx&#10;@NombreDelCanal&#10;http://192.168.1.50:8080/mjpg/video.mjpg"></textarea>
     <div class="fila">
       <label title="De dónde lee el sonido el visualizador. 'Mezcla estéreo' entrega lo que suena en el PC.">Entrada del visualizador
@@ -283,33 +283,34 @@
 
 <!-- hls.js (Apache 2.0, js/vendor/LICENSE-hls.js.txt): reproduce canales de TV .m3u8 -->
 <script src="js/vendor/hls.min.js?v=1.6.13"></script>
-<script src="js/config.js?v=20261024i"></script>
-<script src="js/urls.js?v=20261024i"></script>
-<script src="js/grilla.js?v=20261024i"></script>
-<script src="js/favoritos.js?v=20261024i"></script>
-<script src="js/reproductor.js?v=20261024i"></script>
-<script src="js/audio.js?v=20261024i"></script>
-<script src="js/visualizador.js?v=20261024i"></script>
-<script src="js/pantalla.js?v=20261024i"></script>
-<script src="js/navegacion.js?v=20261024i"></script>
-<script src="js/carrusel.js?v=20261024i"></script>
-<script src="js/ampliar.js?v=20261024i"></script>
-<script src="js/pausa.js?v=20261024i"></script>
-<script src="js/panel.js?v=20261024i"></script>
-<script src="js/respaldo.js?v=20261024i"></script>
-<script src="js/camaras.js?v=20261024i"></script>
-<script src="js/buscar.js?v=20261024i"></script>
-<script src="js/externos.js?v=20261024i"></script>
-<script src="js/directos.js?v=20261024i"></script>
-<script src="js/sincronizar.js?v=20261024i"></script>
-<script src="js/teclas.js?v=20261024i"></script>
-<script src="js/superfav.js?v=20261024i"></script>
-<script src="js/cuentaatras.js?v=20261024i"></script>
-<script src="js/fondo.js?v=20261024i"></script>
-<script src="js/estado.js?v=20261024i"></script>
-<script src="js/tv.js?v=20261024i"></script>
-<script src="js/comprobar.js?v=20261024i"></script>
-<script src="js/mover.js?v=20261024i"></script>
-<script src="js/main.js?v=20261024i"></script>
+<script src="js/config.js?v=20261026a"></script>
+<script src="js/urls.js?v=20261026a"></script>
+<script src="js/grilla.js?v=20261026a"></script>
+<script src="js/favoritos.js?v=20261026a"></script>
+<script src="js/reproductor.js?v=20261026a"></script>
+<script src="js/audio.js?v=20261026a"></script>
+<script src="js/visualizador.js?v=20261026a"></script>
+<script src="js/pantalla.js?v=20261026a"></script>
+<script src="js/navegacion.js?v=20261026a"></script>
+<script src="js/carrusel.js?v=20261026a"></script>
+<script src="js/ampliar.js?v=20261026a"></script>
+<script src="js/pausa.js?v=20261026a"></script>
+<script src="js/panel.js?v=20261026a"></script>
+<script src="js/respaldo.js?v=20261026a"></script>
+<script src="js/camaras.js?v=20261026a"></script>
+<script src="js/buscar.js?v=20261026a"></script>
+<script src="js/externos.js?v=20261026a"></script>
+<script src="js/directos.js?v=20261026a"></script>
+<script src="js/sincronizar.js?v=20261026a"></script>
+<script src="js/teclas.js?v=20261026a"></script>
+<script src="js/superfav.js?v=20261026a"></script>
+<script src="js/cuentaatras.js?v=20261026a"></script>
+<script src="js/fondo.js?v=20261026a"></script>
+<script src="js/estado.js?v=20261026a"></script>
+<script src="js/tv.js?v=20261026a"></script>
+<script src="js/rudo.js?v=20261026a"></script>
+<script src="js/comprobar.js?v=20261026a"></script>
+<script src="js/mover.js?v=20261026a"></script>
+<script src="js/main.js?v=20261026a"></script>
 </body>
 </html>

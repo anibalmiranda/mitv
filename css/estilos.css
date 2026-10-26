@@ -726,3 +726,7 @@ body.modo-audio .celda .carga-tv { display: none; }
   width: auto; padding: 0 12px; border-radius: 13px; opacity: 1;
   background: #b3261e; font-size: 13px; font-weight: 600; white-space: nowrap;
 }
+
+/* Canales de rudo.video (rudo.js): sin volumen propio ni audio de fondo, que su reproductor no acepta
+   (la barra de su reproductor queda al alcance del mouse, como la de YouTube) */
+.celda.rudo .volumen, .celda.rudo .fondo { display: none !important; }
