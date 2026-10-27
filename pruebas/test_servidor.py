@@ -91,6 +91,64 @@ class SaludDeLaLectura(unittest.TestCase):
         self.assertEqual(servidor.salud['estado'], 'ok')
 
 
+class FrenoDeYouTube(unittest.TestCase):
+    """Si YouTube responde 429, se deja de consultarle un rato y el aviso se quita solo cuando vuelve a responder."""
+
+    def setUp(self):
+        self.original = servidor.urllib.request.urlopen
+        self.pedidos = 0
+        servidor._freno.update(hasta=0.0, espera=servidor.FRENO_INICIAL_S)
+        self.addCleanup(lambda: setattr(servidor.urllib.request, 'urlopen', self.original))
+        self.addCleanup(lambda: servidor._freno.update(hasta=0.0, espera=servidor.FRENO_INICIAL_S))
+        self.addCleanup(lambda: servidor.fijar_salud('ok'))
+        silencio = contextlib.redirect_stdout(io.StringIO())
+        silencio.__enter__()
+        self.addCleanup(silencio.__exit__, None, None, None)
+
+    def responder(self, codigo):
+        def urlopen(req, timeout=None):
+            self.pedidos += 1
+            if codigo != 200:
+                raise servidor.urllib.error.HTTPError(req.full_url, codigo, 'x', None, None)
+            return contextlib.nullcontext(io.BytesIO(pagina_video().encode()))
+        servidor.urllib.request.urlopen = urlopen
+
+    def test_tras_un_429_no_se_vuelve_a_consultar(self):
+        self.responder(429)
+        with self.assertRaises(servidor.urllib.error.HTTPError):
+            servidor.bajar('https://www.youtube.com/watch?v=abcdefghijk')
+        self.assertEqual(servidor.salud['estado'], 'falla')
+        self.assertIn('bajar el ritmo', servidor.salud['detalle'])
+        self.assertGreater(servidor.frenado(), 14 * 60)
+        with self.assertRaises(servidor.urllib.error.HTTPError) as e:
+            servidor.bajar('https://www.youtube.com/watch?v=otro0000000')
+        self.assertEqual(e.exception.code, 429)
+        self.assertEqual(self.pedidos, 1, 'durante la pausa no se molesta a YouTube')
+
+    def test_la_pausa_crece_si_sigue_frenando_y_una_lectura_buena_quita_el_aviso(self):
+        self.responder(429)
+        for _ in range(2):
+            servidor._freno['hasta'] = 0.0   # terminó la pausa anterior
+            with self.assertRaises(servidor.urllib.error.HTTPError):
+                servidor.bajar('https://www.youtube.com/watch?v=abcdefghijk')
+        self.assertGreater(servidor.frenado(), 29 * 60, 'la segunda pausa es el doble')
+        servidor._freno['hasta'] = 0.0
+        self.responder(200)
+        servidor.bajar('https://www.youtube.com/watch?v=abcdefghijk')
+        self.assertEqual(servidor.salud['estado'], 'ok', 'volvió a responder: se quita el aviso')
+        self.assertEqual(servidor._freno['espera'], servidor.FRENO_INICIAL_S)
+
+    def test_video_normal_se_recuerda_mas_que_un_directo(self):
+        servidor._cache.clear()
+        llamadas = []
+        normal = servidor.recordado('prueba:n', lambda r: 600 if r.get('directo') else 6 * 3600,
+                                    lambda: llamadas.append(1) or {'directo': False})
+        self.assertGreater(servidor._cache['prueba:n'][0] - servidor.time.time(), 5 * 3600)
+        servidor.recordado('prueba:n', 600, lambda: llamadas.append(1) or {})
+        self.assertEqual(len(llamadas), 1, 'la segunda vez sale de la memoria')
+        self.assertEqual(normal, {'directo': False})
+
+
 class DatosEnArchivo(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp(prefix='mitv-prueba-')

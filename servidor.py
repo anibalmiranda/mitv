@@ -67,22 +67,60 @@ _cache_lock = threading.Lock()
 
 
 def recordado(clave, segundos, calcular):
+    # segundos puede depender de la respuesta: función que recibe el resultado y dice cuánto recordarlo
     ahora = time.time()
     with _cache_lock:
         v = _cache.get(clave)
-        if v and ahora - v[0] < segundos:
+        if v and ahora < v[0]:
             return v[1]
     res = calcular()
     with _cache_lock:
-        _cache[clave] = (ahora, res)
+        _cache[clave] = (ahora + (segundos(res) if callable(segundos) else segundos), res)
     return res
 
 
 # ---------- Lectura de páginas de YouTube ----------
+# Si YouTube responde 429 ("demasiadas consultas"), se deja de consultarle un rato: insistir solo alarga el bloqueo.
+# La pausa parte en 15 min y se duplica si al volver sigue frenando (hasta 2 h); una lectura buena la reinicia.
+FRENO_INICIAL_S = 15 * 60
+FRENO_MAXIMO_S = 2 * 3600
+_freno = {'hasta': 0.0, 'espera': FRENO_INICIAL_S}
+_freno_lock = threading.Lock()
+
+
+def frenado():
+    """Segundos que faltan para volver a consultar a YouTube (0 = se puede)."""
+    with _freno_lock:
+        return max(0.0, _freno['hasta'] - time.time())
+
+
+def aviso_freno():
+    hora = time.strftime('%H:%M', time.localtime(_freno['hasta']))
+    return 'YouTube pidió bajar el ritmo (respondió 429); se vuelve a intentar a las ' + hora
+
+
 def bajar(url):
+    if frenado():
+        raise urllib.error.HTTPError(url, 429, 'en pausa por el freno de YouTube', None, None)
     req = urllib.request.Request(url, headers=CABECERAS_YT)
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return r.read().decode('utf-8', 'replace')
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            pagina = r.read().decode('utf-8', 'replace')
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            with _freno_lock:
+                _freno['hasta'] = time.time() + _freno['espera']
+                _freno['espera'] = min(_freno['espera'] * 2, FRENO_MAXIMO_S)
+            fijar_salud('falla', aviso_freno())
+        raise
+    with _freno_lock:
+        _freno['espera'] = FRENO_INICIAL_S
+    # Una lectura buena: si el aviso era por el freno, ya pasó
+    with _salud_lock:
+        era_freno = salud['estado'] == 'falla' and salud['detalle'].startswith('YouTube pidió bajar el ritmo')
+    if era_freno:
+        fijar_salud('ok')
+    return pagina
 
 
 def texto_json(s):
@@ -365,16 +403,22 @@ def revisar_salud():
             return fijar_salud('falla', 'no se pudo leer la página de un canal')
         fijar_salud('ok')
     except urllib.error.HTTPError as e:
-        fijar_salud('falla', 'YouTube respondió ' + str(e.code))
+        fijar_salud('falla', aviso_freno() if e.code == 429 else 'YouTube respondió ' + str(e.code))
     except (urllib.error.URLError, OSError):
         fijar_salud('sin_conexion', 'no hay conexión con YouTube')
 
 
 def vigilar_salud():
     time.sleep(5)   # que el servidor alcance a arrancar
+    ultima = 0.0
     while True:
-        revisar_salud()
-        time.sleep(REVISION_SALUD_S)
+        # Cada 3 h, o apenas termina una pausa por el freno de YouTube (para quitar el aviso cuanto antes)
+        with _salud_lock:
+            por_freno = salud['estado'] == 'falla' and salud['detalle'].startswith('YouTube pidió bajar el ritmo')
+        if time.time() - ultima >= REVISION_SALUD_S or (por_freno and not frenado()):
+            ultima = time.time()
+            revisar_salud()
+        time.sleep(60)
 
 
 # ---------- Datos del usuario en archivo ----------
@@ -693,7 +737,9 @@ class Manejador(SimpleHTTPRequestHandler):
             ruta = q['ruta'].lower()
             return recordado('canal:' + ruta, 7 * 86400, lambda: info_canal(ruta))
         if que == 'video' and RX_VIDEO.match(q.get('id', '')):
-            return recordado('video:' + q['id'], 600, lambda: info_video(q['id']))
+            # Un video normal no cambia: se recuerda 6 h; los directos (y los que fueron directo), 10 min
+            return recordado('video:' + q['id'], lambda r: 600 if r.get('directo') or r.get('error') else 6 * 3600,
+                             lambda: info_video(q['id']))
         if que == 'canalhls' and re.match(r'^https?://', q.get('url', ''), re.IGNORECASE):
             return recordado('hls:' + q['url'], 600, lambda: revisar_hls(q['url']))
         if que == 'directo' and RX_CANAL.match(q.get('canal', '')):
