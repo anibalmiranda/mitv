@@ -329,10 +329,14 @@ function celdasActivas() {
   // Ahorro por inactividad: solo el que suena y el que se está viendo ampliado
   if (enAhorro) return new Set(videos.filter(c => c.dataset.mute === '0' || c.dataset.pendiente ||
                                                   c.classList.contains('max') || (fundido && fundido.nueva === c)));
-  const limite = Number(config.maxActivos) || 0;
-  if (!limite || videos.length <= limite) return new Set(videos);
   // Con uno ampliado, el anterior y el siguiente quedan precargados (las flechas y el carrusel cambian sin espera)
   const vecinos = vecinosDelAmpliado();
+  // "Al ampliar, descargar los tapados": solo el ampliado, sus vecinos y el que suena; el resto no carga nada
+  if (config.descargarOcultos && !config.modoAudio && vecinos.size)
+    return new Set(videos.filter(c => c.dataset.mute === '0' || c.dataset.pendiente || c.classList.contains('max') ||
+                                      (fundido && fundido.nueva === c) || vecinos.has(c)));
+  const limite = Number(config.maxActivos) || 0;
+  if (!limite || videos.length <= limite) return new Set(videos);
   const activas = new Set(videos.filter(c => c.dataset.mute === '0' || c.dataset.pendiente ||
                                               c.classList.contains('max') || c._despierta || vecinos.has(c)));
   for (const c of videos) { if (activas.size >= limite) break; activas.add(c); }

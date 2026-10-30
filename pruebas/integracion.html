@@ -129,6 +129,27 @@ prueba('modo liviano: con uno ampliado, el anterior y el siguiente quedan precar
   w.eval('config.maxActivos = 0');
   cambiarLista('A'); await espera(1500);
 });
+prueba('al ampliar, los tapados se descargan del todo y vuelven al volver a la grilla', async () => {
+  const L = ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'].map(x => 'https://www.youtube.com/watch?v=' + x.padEnd(11, '0'));
+  w.eval('config.listas["D"] = ' + JSON.stringify(L) + '; config.actual = "D"; config.maxActivos = 0; config.descargarOcultos = true');
+  w.pintarSelector(); w.render(true); await espera(3000);
+  try {
+    const cargado = x => !x.classList.contains('dormida') && !x.querySelector('iframe').dataset.src;
+    igual(c().map(cargado), [true, true, true, true, true, true], 'en la grilla todos cargan');
+    w.alternarMax(c()[2]); await espera(800);
+    igual(c().map(cargado), [false, true, true, true, false, false], 'ampliado (3) y vecinos (2 y 4); el resto descargado');
+    igual(c()[5].querySelector('iframe').getAttribute('src'), 'about:blank', 'los tapados no cargan nada');
+    w.restaurarTodo(); await espera(3000);
+    igual(c().map(cargado), [true, true, true, true, true, true], 'al volver a la grilla se cargan de nuevo');
+    w.eval('config.descargarOcultos = false');
+    w.alternarMax(c()[2]); await espera(800);
+    igual(c().map(cargado), [true, true, true, true, true, true], 'con la opción apagada no se descargan');
+    w.restaurarTodo();
+  } finally {
+    w.eval('config.descargarOcultos = true');
+    cambiarLista('A'); await espera(1500);
+  }
+});
 prueba('teclas 1 a 9 van a ese video', () => {
   tecla('3'); igual(conAudio(), 2);
   tecla('9'); cierto(/No hay un video 9/.test(d.getElementById('indicador').textContent));

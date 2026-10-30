@@ -60,6 +60,7 @@ function abrirPanel() {
   $('chkAleatorio').checked = config.inicioAleatorio;
   $('chkSiguiente').checked = config.alTerminarSiguiente;
   $('chkPausarOcultos').checked = config.pausarOcultos;
+  $('chkDescargarOcultos').checked = config.descargarOcultos;
   $('numFade').value = config.fade;
   $('numFadeImg').value = config.fadeImg;
   $('numCarrusel').value = config.carruselSeg;
@@ -203,6 +204,7 @@ function guardarPanel() {
   config.inicioAleatorio = $('chkAleatorio').checked;
   config.alTerminarSiguiente = $('chkSiguiente').checked;
   config.pausarOcultos = $('chkPausarOcultos').checked;
+  config.descargarOcultos = $('chkDescargarOcultos').checked;
   config.fade = Math.min(20, Math.max(0, parseInt($('numFade').value, 10) || 0));
   config.fadeImg = Math.min(10, Math.max(0, parseFloat($('numFadeImg').value) || 0));
   config.carruselSeg = Math.min(600, Math.max(5, parseInt($('numCarrusel').value, 10) || 30));

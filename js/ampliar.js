@@ -30,7 +30,7 @@ function pintarAmpliado() {
   if (hay && !habia && config.tiraFija) abrirTira();   // 📌 tira fija: se abre sola al ampliar
   if (!hay && !document.fullscreenElement) cerrarTira();
   pintarNombreAmpliado();
-  if (hay) programarCarga();   // precarga el anterior y el siguiente del ampliado
+  programarCarga();   // precarga el anterior y el siguiente del ampliado; al volver a la grilla, carga los tapados
 }
 // Rótulo abajo a la derecha con el nombre del canal ampliado (doble clic o pantalla completa); se pone al día al
 // cambiar de canal (flechas, tira, carrusel) y cuando el reproductor informa el título.
@@ -60,6 +60,7 @@ function terminarFundidoImagen() {
   void nueva.offsetWidth;                        // corta la transición en curso y deja la opacidad en 1
   nueva.style.transition = '';
   programarPausaOcultos();
+  programarCarga();   // el que salió puede quedar lejos del nuevo ampliado: se descarga si corresponde
   pintarNombreAmpliado();
 }
 function cambiarAmpliado(nueva) {

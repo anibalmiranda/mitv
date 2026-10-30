@@ -8,7 +8,7 @@
 <!-- Abre de antemano las conexiones con YouTube y sus miniaturas (la grilla carga más rápido) -->
 <link rel="preconnect" href="https://www.youtube.com">
 <link rel="preconnect" href="https://i.ytimg.com">
-<link rel="stylesheet" href="css/estilos.css?v=20261026a">
+<link rel="stylesheet" href="css/estilos.css?v=20261030a">
 </head>
 <body>
 
@@ -182,6 +182,7 @@
       <label title="Los videos que no son en vivo parten en un punto al azar (si la URL trae ?t= se respeta ese tiempo)"><input type="checkbox" id="chkAleatorio" checked> Inicio aleatorio</label>
       <label title="Cuando un video (que no es en vivo) termina, el audio pasa al siguiente de la lista y el terminado vuelve a partir"><input type="checkbox" id="chkSiguiente" checked> Al terminar, pasar al siguiente</label>
       <label title="Con un video ampliado, solo corren el actual, el anterior y el siguiente. Con la ventana minimizada o en otra pestaña, solo el que tiene el audio. El resto se pausa y libera la conexión"><input type="checkbox" id="chkPausarOcultos" checked> Pausar los que no se ven</label>
+      <label title="Con un video ampliado (doble clic o pantalla completa), los cuadros tapados se descargan del todo: no gastan conexión, memoria ni procesador. Solo quedan cargados el ampliado, el anterior, el siguiente y el que tiene el audio. Al volver a la grilla se cargan de nuevo de a poco"><input type="checkbox" id="chkDescargarOcultos" checked> Al ampliar, descargar los tapados</label>
       <label title="Al pasar el audio de un video a otro, el anterior baja y el nuevo sube durante estos segundos (0 = cambio inmediato)">Fundido de audio
         <input type="number" id="numFade" min="0" max="20" step="1" value="7"
           style="width:56px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"> s</label>
@@ -283,34 +284,34 @@
 
 <!-- hls.js (Apache 2.0, js/vendor/LICENSE-hls.js.txt): reproduce canales de TV .m3u8 -->
 <script src="js/vendor/hls.min.js?v=1.6.13"></script>
-<script src="js/config.js?v=20261026a"></script>
-<script src="js/urls.js?v=20261026a"></script>
-<script src="js/grilla.js?v=20261026a"></script>
-<script src="js/favoritos.js?v=20261026a"></script>
-<script src="js/reproductor.js?v=20261026a"></script>
-<script src="js/audio.js?v=20261026a"></script>
-<script src="js/visualizador.js?v=20261026a"></script>
-<script src="js/pantalla.js?v=20261026a"></script>
-<script src="js/navegacion.js?v=20261026a"></script>
-<script src="js/carrusel.js?v=20261026a"></script>
-<script src="js/ampliar.js?v=20261026a"></script>
-<script src="js/pausa.js?v=20261026a"></script>
-<script src="js/panel.js?v=20261026a"></script>
-<script src="js/respaldo.js?v=20261026a"></script>
-<script src="js/camaras.js?v=20261026a"></script>
-<script src="js/buscar.js?v=20261026a"></script>
-<script src="js/externos.js?v=20261026a"></script>
-<script src="js/directos.js?v=20261026a"></script>
-<script src="js/sincronizar.js?v=20261026a"></script>
-<script src="js/teclas.js?v=20261026a"></script>
-<script src="js/superfav.js?v=20261026a"></script>
-<script src="js/cuentaatras.js?v=20261026a"></script>
-<script src="js/fondo.js?v=20261026a"></script>
-<script src="js/estado.js?v=20261026a"></script>
-<script src="js/tv.js?v=20261026a"></script>
-<script src="js/rudo.js?v=20261026a"></script>
-<script src="js/comprobar.js?v=20261026a"></script>
-<script src="js/mover.js?v=20261026a"></script>
-<script src="js/main.js?v=20261026a"></script>
+<script src="js/config.js?v=20261030a"></script>
+<script src="js/urls.js?v=20261030a"></script>
+<script src="js/grilla.js?v=20261030a"></script>
+<script src="js/favoritos.js?v=20261030a"></script>
+<script src="js/reproductor.js?v=20261030a"></script>
+<script src="js/audio.js?v=20261030a"></script>
+<script src="js/visualizador.js?v=20261030a"></script>
+<script src="js/pantalla.js?v=20261030a"></script>
+<script src="js/navegacion.js?v=20261030a"></script>
+<script src="js/carrusel.js?v=20261030a"></script>
+<script src="js/ampliar.js?v=20261030a"></script>
+<script src="js/pausa.js?v=20261030a"></script>
+<script src="js/panel.js?v=20261030a"></script>
+<script src="js/respaldo.js?v=20261030a"></script>
+<script src="js/camaras.js?v=20261030a"></script>
+<script src="js/buscar.js?v=20261030a"></script>
+<script src="js/externos.js?v=20261030a"></script>
+<script src="js/directos.js?v=20261030a"></script>
+<script src="js/sincronizar.js?v=20261030a"></script>
+<script src="js/teclas.js?v=20261030a"></script>
+<script src="js/superfav.js?v=20261030a"></script>
+<script src="js/cuentaatras.js?v=20261030a"></script>
+<script src="js/fondo.js?v=20261030a"></script>
+<script src="js/estado.js?v=20261030a"></script>
+<script src="js/tv.js?v=20261030a"></script>
+<script src="js/rudo.js?v=20261030a"></script>
+<script src="js/comprobar.js?v=20261030a"></script>
+<script src="js/mover.js?v=20261030a"></script>
+<script src="js/main.js?v=20261030a"></script>
 </body>
 </html>

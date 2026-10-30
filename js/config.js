@@ -39,6 +39,7 @@ let config = {
   inicioAleatorio: true, // los videos que no son en vivo parten en un punto al azar
   alTerminarSiguiente: true, // al terminar un video, el audio pasa al siguiente
   pausarOcultos: true,   // en pantalla completa pausa los ocultos (salvo el anterior y el siguiente)
+  descargarOcultos: true,   // con un video ampliado, los tapados se descargan del todo (no solo se pausan)
   visualActivo: false,   // visualizador encendido (se reactiva solo al recargar)
   visualEntrada: '',     // deviceId de la entrada de audio ('' = automático: busca "Mezcla estéreo")
   duraciones: {},        // memoria de duraciones { idVideo: { d: segundos, vivo: bool, t: fecha } }
