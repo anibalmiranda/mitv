@@ -39,6 +39,7 @@ let config = {
   inicioAleatorio: true, // los videos que no son en vivo parten en un punto al azar
   alTerminarSiguiente: true, // al terminar un video, el audio pasa al siguiente
   pausarOcultos: true,   // en pantalla completa pausa los ocultos (salvo el anterior y el siguiente)
+  programas: [],   // a cierta hora, cambiar solo a un canal (programas.js)
   descargarOcultos: true,   // con un video ampliado, los tapados se descargan del todo (no solo se pausan)
   visualActivo: false,   // visualizador encendido (se reactiva solo al recargar)
   visualEntrada: '',     // deviceId de la entrada de audio ('' = automático: busca "Mezcla estéreo")
@@ -85,6 +86,7 @@ function normalizarConfig() {
   if (!config.listas || !Object.keys(config.listas).length) config.listas = { 'Principal': [] };
   if (!config.listas[config.actual]) config.actual = Object.keys(config.listas)[0];
   if (!Array.isArray(config.favoritos)) config.favoritos = [];
+  if (!Array.isArray(config.programas)) config.programas = [];
   if (!config.ultimos || typeof config.ultimos !== 'object') config.ultimos = {};
   if (!config.duraciones || typeof config.duraciones !== 'object') config.duraciones = {};
   if (!config.nombres || typeof config.nombres !== 'object') config.nombres = {};

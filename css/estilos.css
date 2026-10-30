@@ -730,3 +730,21 @@ body.modo-audio .celda .carga-tv { display: none; }
 /* Canales de rudo.video (rudo.js): sin volumen propio ni audio de fondo, que su reproductor no acepta
    (la barra de su reproductor queda al alcance del mouse, como la de YouTube) */
 .celda.rudo .volumen, .celda.rudo .fondo { display: none !important; }
+
+/* Programas ⏰ en el ⚙ (programas.js): hora, días, canal */
+#listaProgramas { display: flex; flex-direction: column; gap: 6px; flex-basis: 100%; order: 1; }
+#listaProgramas:empty { display: none; }
+.programa { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.programa input[type=time], .programa select {
+  background: #111113; color: var(--texto); border: 1px solid var(--borde); border-radius: 4px; padding: 3px 6px;
+}
+.programa select { max-width: 340px; flex: 1; min-width: 180px; }
+.programa .dias { display: flex; gap: 2px; }
+.fila .programa .dia { gap: 0; }
+.programa .dia input { display: none; }
+.programa .dia span {
+  width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; background: #111113; border: 1px solid var(--borde); color: var(--suave); user-select: none;
+}
+.programa .dia input:checked + span { background: var(--acento); border-color: var(--acento); color: #fff; }
+.programa .btn { padding: 2px 8px; }

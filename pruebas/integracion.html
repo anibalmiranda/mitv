@@ -150,6 +150,42 @@ prueba('al ampliar, los tapados se descargan del todo y vuelven al volver a la g
     cambiarLista('A'); await espera(1500);
   }
 });
+prueba('programas ⏰: a la hora cambia a la lista del canal, lo amplía y le da el audio', async () => {
+  const X = 'https://www.youtube.com/watch?v=' + 'programa001', O = 'https://www.youtube.com/watch?v=' + 'otrovideo01';
+  const t = new w.Date(2026, 9, 30, 21, 0, 0);   // viernes 30/10/2026 21:00
+  w.eval('config.listas["Noticias"] = ' + JSON.stringify([O, X]) + '; config.programas = [{ hora: "21:00", dias: [5], lista: "Noticias", linea: "' + X + '", activo: true }]');
+  try {
+    // El ⚙ muestra el programa y al guardar queda igual
+    w.llenarProgramas();
+    const fila = d.querySelector('#listaProgramas .programa');
+    igual(fila.querySelector('.hora').value, '21:00');
+    igual([...fila.querySelectorAll('.dia input:checked')].map(x => x.value), ['5'], 'solo el viernes marcado');
+    igual(JSON.parse(fila.querySelector('.canal').value), ['Noticias', X], 'el canal elegido');
+    w.leerProgramas();
+    igual(w.eval('config.programas[0].linea'), X, 'al guardar se conserva');
+    // Un minuto antes avisa; a la hora cambia
+    w.revisarProgramas(new w.Date(t.getTime() - 30000));
+    cierto(d.getElementById('indicador').textContent.includes('En 1 minuto'), 'aviso un minuto antes');
+    igual(w.eval('config.actual'), 'A', 'todavía no cambia');
+    w.revisarProgramas(new w.Date(t.getTime() + 20000));
+    await espera(300);
+    igual(w.eval('config.actual'), 'Noticias', 'pasó a la lista del canal');
+    const celda = c()[1];
+    cierto(celda.classList.contains('max'), 'el canal queda ampliado');
+    igual(celda.dataset.mute, '0', 'y con el audio');
+    cierto(d.getElementById('indicador').textContent.includes('⏰ 21:00'), 'avisa qué programa es');
+    // No se repite, y otro día de la semana no corre
+    cambiarLista('A'); await espera(300);
+    w.revisarProgramas(new w.Date(t.getTime() + 60000));
+    igual(w.eval('config.actual'), 'A', 'el mismo programa no vuelve a cambiar');
+    w.revisarProgramas(new w.Date(t.getTime() + 86400000 + 10000));
+    igual(w.eval('config.actual'), 'A', 'el sábado no está marcado');
+  } finally {
+    w.restaurarTodo();
+    w.eval('config.programas = []; delete config.listas["Noticias"]');
+    cambiarLista('A'); await espera(1500);
+  }
+});
 prueba('teclas 1 a 9 van a ese video', () => {
   tecla('3'); igual(conAudio(), 2);
   tecla('9'); cierto(/No hay un video 9/.test(d.getElementById('indicador').textContent));

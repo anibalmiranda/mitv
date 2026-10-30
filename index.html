@@ -175,6 +175,11 @@
       <label title="Horas de jornada el viernes">Viernes
         <input type="number" id="caViernes" min="0" max="24" step="0.5" value="8" style="width:56px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"> h</label>
     </div>
+    <div class="fila" id="filaProgramas">
+      <span class="etiqueta-fila" title="A esta hora (en los días marcados) la página cambia sola a ese canal: lo amplía y le da el audio. Avisa un minuto antes">Programas ⏰</span>
+      <div id="listaProgramas"></div>
+      <button class="btn secundario" id="btnAgregarPrograma" title="A cierta hora, cambiar solo a un canal para no perderte un programa">＋ Agregar programa</button>
+    </div>
     <div id="aviso"></div>
     <div class="fila">
       <label><input type="checkbox" id="chkAutoplay" checked> Autoplay</label>
@@ -312,6 +317,7 @@
 <script src="js/rudo.js?v=20261030a"></script>
 <script src="js/comprobar.js?v=20261030a"></script>
 <script src="js/mover.js?v=20261030a"></script>
+<script src="js/programas.js?v=20261030a"></script>
 <script src="js/main.js?v=20261030a"></script>
 </body>
 </html>
