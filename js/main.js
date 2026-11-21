@@ -36,8 +36,8 @@ document.addEventListener('keydown', e => {
     if (k === 'f') { e.preventDefault(); btnPantalla.click(); }
     if (k === 'c') {
       e.preventDefault();
-      if (document.fullscreenElement) $('btnCarrusel').click();
-      else mostrarMensaje('El carrusel es para pantalla completa: presiona F');
+      if (document.fullscreenElement || document.body.classList.contains('con-ampliado')) $('btnCarrusel').click();
+      else mostrarMensaje('El carrusel es para un canal ampliado (doble clic) o pantalla completa (F)');
     }
     if (/^[1-9]$/.test(k)) { e.preventDefault(); irANumero(Number(k)); }
   }
@@ -70,6 +70,7 @@ mudarseSiHaceFalta().then(mudado => {
     ajustarCamaras();   // ya se sabe si hay servidor: algunas cámaras se conectan a través de él
     conectarTeclasMultimedia();
     consultarSalud();   // ¿funciona la lectura de YouTube?
+    abrirCompartido();  // la página se abrió con un link 🔗 de un canal
   });
 });
 // Si el visualizador quedó encendido, se reactiva solo (el permiso de la entrada ya está dado)

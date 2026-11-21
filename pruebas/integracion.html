@@ -186,6 +186,61 @@ prueba('programas ⏰: a la hora cambia a la lista del canal, lo amplía y le da
     cambiarLista('A'); await espera(1500);
   }
 });
+prueba('🔗 compartir: copia un link que abre ese canal ampliado en su lista', async () => {
+  const X = 'https://www.youtube.com/watch?v=' + 'compartido1', O = 'https://www.youtube.com/watch?v=' + 'otrocanal01';
+  w.eval('config.listas["Comp"] = ' + JSON.stringify([O, X]) + '; window._copiado = ""; window._copiarOrig = copiarTexto; ' +
+         'copiarTexto = async t => { window._copiado = t; return true; }');
+  w.pintarSelector();
+  try {
+    // El botón solo se ve con el cuadro ampliado
+    igual(w.getComputedStyle(c()[0].querySelector('.compartir')).display, 'none', 'en la grilla no aparece');
+    cambiarLista('Comp'); await espera(300);
+    w.alternarMax(c()[1]);
+    igual(w.getComputedStyle(c()[1].querySelector('.compartir')).display, 'block', 'ampliado sí aparece');
+    c()[1].querySelector('.compartir').click(); await espera(50);
+    const link = new w.URL(w._copiado);
+    igual([link.searchParams.get('ver'), link.searchParams.get('lista')], [X, 'Comp'], 'el link trae el canal y su lista');
+    w.restaurarTodo();
+    // Abrir el link: cambia a la lista, lo amplía y le da el audio; la dirección queda limpia
+    cambiarLista('A'); await espera(300);
+    const antes = w.location.href;
+    w.history.replaceState(null, '', link.pathname + link.search);
+    w.abrirCompartido(); await espera(300);
+    igual(w.eval('config.actual'), 'Comp', 'pasó a su lista');
+    cierto(c()[1].classList.contains('max'), 'ampliado');
+    igual(c()[1].dataset.mute, '0', 'con el audio');
+    igual(w.location.search, '', 'al recargar ya no vuelve a saltar');
+    w.restaurarTodo();
+    // Un canal que no está en ninguna lista: se muestra sin guardarlo
+    const N = 'https://www.youtube.com/watch?v=' + 'noestaenlis';
+    cambiarLista('A'); await espera(300);
+    const nA = w.eval('config.listas["A"].length');
+    w.history.replaceState(null, '', link.pathname + '?ver=' + encodeURIComponent(N));
+    w.abrirCompartido(); await espera(300);
+    const ult = c()[c().length - 1];
+    igual(ult.dataset.linea, N, 'aparece al final de la vista');
+    cierto(ult.classList.contains('max'), 'ampliado');
+    igual(w.eval('config.listas["A"].length'), nA, 'no se guarda en la lista');
+    w.restaurarTodo();
+    cambiarLista('Comp'); await espera(300); cambiarLista('A'); await espera(300);
+    cierto(!c().some(x => x.dataset.linea === N), 'al cambiar de lista desaparece');
+    w.history.replaceState(null, '', antes);
+  } finally {
+    w.eval('copiarTexto = _copiarOrig; delete config.listas["Comp"]; extraTemporal = null');
+    w.restaurarTodo();
+    cambiarLista('A'); await espera(1500);
+  }
+});
+prueba('carrusel también con un canal ampliado (sin pantalla completa)', async () => {
+  const b = d.getElementById('btnCarrusel');
+  igual(w.getComputedStyle(b).display, 'none', 'en la grilla no está');
+  w.alternarMax(c()[0]);
+  igual(w.getComputedStyle(b).display, 'flex', 'con un canal ampliado aparece');
+  tecla('c');
+  cierto(d.body.classList.contains('carrusel-activo'), 'la tecla C lo inicia');
+  w.restaurarTodo();
+  cierto(!d.body.classList.contains('carrusel-activo'), 'al volver a la grilla se detiene');
+});
 prueba('teclas 1 a 9 van a ese video', () => {
   tecla('3'); igual(conAudio(), 2);
   tecla('9'); cierto(/No hay un video 9/.test(d.getElementById('indicador').textContent));

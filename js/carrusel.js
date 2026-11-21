@@ -1,5 +1,5 @@
 // Multi YouTube — carrusel.js
-// Carrusel: recorre solo los videos de la lista elegida cada N segundos (pantalla completa).
+// Carrusel: recorre solo los videos de la lista elegida cada N segundos (canal ampliado o pantalla completa).
 // Los archivos se cargan en orden desde index.html y comparten variables (scripts clásicos).
 
 // ---------- Carrusel (pantalla completa) ----------
@@ -74,6 +74,6 @@ function detenerCarrusel() {
   clearTimeout(carrusel.previo);
   carrusel = null;
   pintarCarrusel();
-  if (document.fullscreenElement) mostrarMensaje('⏹ Carrusel detenido');
+  if (document.fullscreenElement || document.body.classList.contains('con-ampliado')) mostrarMensaje('⏹ Carrusel detenido');
 }
 $('btnCarrusel').addEventListener('click', () => { if (carrusel) detenerCarrusel(); else iniciarCarrusel(); });

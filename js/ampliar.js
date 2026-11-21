@@ -28,7 +28,7 @@ function pintarAmpliado() {
   const habia = document.body.classList.contains('con-ampliado');
   document.body.classList.toggle('con-ampliado', hay);
   if (hay && !habia && config.tiraFija) abrirTira();   // 📌 tira fija: se abre sola al ampliar
-  if (!hay && !document.fullscreenElement) cerrarTira();
+  if (!hay && !document.fullscreenElement) { cerrarTira(); detenerCarrusel(); }   // volviste a la grilla
   pintarNombreAmpliado();
   programarCarga();   // precarga el anterior y el siguiente del ampliado; al volver a la grilla, carga los tapados
 }

@@ -275,7 +275,7 @@ body.ui-oculta #atrapaMouse { display: block; }
 #barra-sup #btnFavs.activo { background: var(--oro); color: #1b1b1e; }
 /* Carrusel: botón visible solo en pantalla completa */
 #barra-sup #btnCarrusel { display: none; }
-body.pantalla-completa #barra-sup #btnCarrusel { display: flex; }
+body.pantalla-completa #barra-sup #btnCarrusel, body.con-ampliado #barra-sup #btnCarrusel { display: flex; }   /* también con un canal ampliado */
 #barra-sup #btnCarrusel.activo svg { animation: girar 2.5s linear infinite; }
 @keyframes girar { to { transform: rotate(360deg); } }
 #barraCarrusel {
@@ -748,3 +748,15 @@ body.modo-audio .celda .carga-tv { display: none; }
 }
 .programa .dia input:checked + span { background: var(--acento); border-color: var(--acento); color: #fff; }
 .programa .btn { padding: 2px 8px; }
+
+/* 🔗 Compartir (compartir.js): solo en el cuadro ampliado */
+.celda .compartir {
+  position: absolute; top: 6px; right: 230px; z-index: 4; display: none;
+  width: 26px; height: 26px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(0,0,0,.65); color: #fff; font-size: 13px; line-height: 26px;
+  opacity: 0; transition: opacity .15s;
+}
+.celda.max .compartir { display: block; }
+.celda:hover .compartir { opacity: 1; }
+.celda.camara .compartir { right: 166px; }   /* las cámaras no tienen 🔍 ni 🎵 */
+body.modo-audio .celda .compartir { display: none; }

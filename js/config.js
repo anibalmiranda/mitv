@@ -148,8 +148,20 @@ function guardar() {
   programarSubida();   // y la copia en archivo (sincronizar.js)
 }
 // Lo que se está mostrando: favoritos o la lista elegida
-function fuente() { return config.vistaFav ? config.favoritos : (config.listas[config.actual] || []); }
+// Canal abierto con un link compartido que no está en ninguna lista (compartir.js): se muestra al final de la vista
+// en que se abrió, sin guardarse. Al cambiar de vista desaparece; con ⇄ se puede copiar a una lista.
+let extraTemporal = null;   // { linea, vista }
+function fuente() {
+  const base = config.vistaFav ? config.favoritos : (config.listas[config.actual] || []);
+  if (extraTemporal && extraTemporal.vista !== vistaId()) extraTemporal = null;
+  return extraTemporal ? base.concat([extraTemporal.linea]) : base;
+}
 function fijarFuente(lineas) {
+  if (extraTemporal) {   // nunca se guarda; si ya no está (lo quitaste o lo moviste), deja de mostrarse
+    const extra = extraTemporal.linea;
+    if (!lineas.includes(extra)) extraTemporal = null;
+    lineas = lineas.filter(l => l !== extra);
+  }
   if (config.vistaFav) config.favoritos = lineas;
   else config.listas[config.actual] = lineas;
 }

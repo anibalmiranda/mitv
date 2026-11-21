@@ -1,7 +1,7 @@
 // Multi YouTube — programas.js
 // Programas: a cierta hora (y en ciertos días) la página cambia sola a un canal, para no perderse un programa.
 // Se configuran en el ⚙ (sección "Programas"). Un minuto antes avisa; a la hora, cambia a la lista de ese canal,
-// lo amplía y le da el audio (apaga el carrusel, la pantalla negra del visualizador y el audio de fondo).
+// lo amplía y le da el audio (apaga el carrusel, la pantalla negra del visualizador y el audio de fondo; abrirCanal).
 // Si la página se abre un poco tarde (hasta 3 min después), igual cambia.
 // config.programas = [{ hora: 'HH:MM', dias: [0..6] (0 = domingo), lista, linea, activo }]
 // Los archivos se cargan en orden desde index.html y comparten variables (scripts clásicos).
@@ -103,23 +103,11 @@ function leerProgramas() {
 // ---------- A la hora ----------
 const programasHechos = new Set();   // 'día|hora|línea': cada programa se avisa y se cambia una sola vez
 function irAPrograma(p) {
-  const k = clave(p.linea);
-  const tiene = n => (config.listas[n] || []).some(l => clave(l) === k);
-  const lista = tiene(p.lista) ? p.lista : Object.keys(config.listas).find(tiene);
-  if (!lista) { mostrarMensaje('⏰ No encontré en tus listas el canal del programa de las ' + p.hora); return; }
-  detenerCarrusel();
-  salirEscena();
-  if (fondoActivo) { config.fondoActivo = false; guardar(); aplicarFondo(); }   // que se oiga el programa
-  if (config.vistaFav || config.actual !== lista) {
-    config.vistaFav = false;
-    config.actual = lista;
-    guardar();
-    render(true);
-    pintarSelector();
+  // abrirCanal (compartir.js): cambia a su lista, lo amplía y le da el audio
+  if (!abrirCanal(p.linea, p.lista, 'programa de las ' + p.hora)) {
+    mostrarMensaje('⏰ No encontré en tus listas el canal del programa de las ' + p.hora);
+    return;
   }
-  const celda = celdas.find(c => clave(c.dataset.linea) === k);
-  if (!celda) return;
-  conCausa('programa de las ' + p.hora, () => irA(celda));
   mostrarMensaje('⏰ ' + p.hora + ' · ' + nombreCanal(p.linea));
 }
 function revisarProgramas(ahora) {

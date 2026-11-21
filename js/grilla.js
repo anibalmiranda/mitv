@@ -251,6 +251,14 @@ function render(reutilizar) {
       bMover.addEventListener('click', () => abrirMover(celda));
       celda.appendChild(bMover);
 
+      // 🔗 Solo con el cuadro ampliado: copia un link que abre directo este canal ampliado (compartir.js)
+      const bCompartir = document.createElement('button');
+      bCompartir.className = 'compartir';
+      bCompartir.textContent = '🔗';
+      bCompartir.title = 'Copiar un link que abre directo este canal ampliado';
+      bCompartir.addEventListener('click', () => compartirCelda(celda));
+      celda.appendChild(bCompartir);
+
       const bMax = document.createElement('button');
       bMax.className = 'maximizar';
       bMax.title = 'Ampliar / miniatura';
