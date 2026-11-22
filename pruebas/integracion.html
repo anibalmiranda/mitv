@@ -241,6 +241,34 @@ prueba('carrusel también con un canal ampliado (sin pantalla completa)', async 
   w.restaurarTodo();
   cierto(!d.body.classList.contains('carrusel-activo'), 'al volver a la grilla se detiene');
 });
+prueba('🔍 buscar parecido: resultados como miniaturas, en vivo y con el permiso del dueño', async () => {
+  const R = [
+    { id: 'aaaaaaaaaaa', titulo: 'Noticias en vivo', canal: 'Canal A', vivo: true, detalle: '997 lo están viendo', incrustable: true, miniatura: 'about:blank' },
+    { id: 'bbbbbbbbbbb', titulo: 'Bloqueado', canal: 'Canal B', vivo: true, detalle: '', incrustable: false, miniatura: 'about:blank' },
+    { id: 'ccccccccccc', titulo: 'Sin saber', canal: 'Canal C', vivo: false, detalle: '', incrustable: null, miniatura: 'about:blank' }];
+  w.eval('window._apiOrig = api; window._pedidos = []; api = async (que, p) => { _pedidos.push([que, p]); return { resultados: ' + JSON.stringify(R) + ' }; }');
+  try {
+    w.abrirBuscar(c()[0]); await espera(100);
+    d.getElementById('buscarTexto').value = 'noticias en vivo';
+    d.getElementById('btnBuscarYT').click(); await espera(100);
+    igual(w._pedidos[w._pedidos.length - 1], ['buscar', { q: 'noticias en vivo', vivo: '0' }], 'busca aquí mismo');
+    const res = [...d.querySelectorAll('#buscarResultados .resultado')];
+    igual(res.length, 3, 'una miniatura por resultado');
+    cierto(res[0].querySelector('.etq-vivo') && !res[2].querySelector('.etq-vivo'), 'marca los que están en vivo');
+    igual(res.map(x => [...x.querySelector('.permiso').textContent][0]), ['✅', '🔒', '❔'], 'permiso del dueño');
+    res[1].click();
+    igual(d.getElementById('buscarNuevaUrl').value, '', 'el bloqueado no se puede elegir');
+    res[0].click();
+    igual(d.getElementById('buscarNuevaUrl').value, 'https://www.youtube.com/watch?v=aaaaaaaaaaa', 'el elegido queda listo para reemplazar');
+    cierto(res[0].classList.contains('elegido'));
+    d.getElementById('buscarSoloVivo').checked = true;
+    d.getElementById('buscarSoloVivo').dispatchEvent(new w.Event('change')); await espera(50);
+    igual(w._pedidos[w._pedidos.length - 1][1].vivo, '1', '"Solo en vivo" vuelve a buscar con el filtro');
+  } finally {
+    w.eval('api = _apiOrig');
+    w.cerrarBuscar();
+  }
+});
 prueba('teclas 1 a 9 van a ese video', () => {
   tecla('3'); igual(conAudio(), 2);
   tecla('9'); cierto(/No hay un video 9/.test(d.getElementById('indicador').textContent));

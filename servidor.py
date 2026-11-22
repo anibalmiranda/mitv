@@ -185,6 +185,120 @@ def info_video(vid):
     return d
 
 
+def info_video_recordada(vid):
+    # Un video normal no cambia: se recuerda 6 h; los directos (y los que fueron directo), 10 min
+    return recordado('video:' + vid, lambda r: 600 if r.get('directo') or r.get('error') else 6 * 3600,
+                     lambda: info_video(vid))
+
+
+# ---------- Búsqueda en YouTube (🔍 Buscar parecido) ----------
+# Lee la página de resultados (los primeros que muestra YouTube) y de cada uno revisa en su página si el dueño
+# permite verlo fuera de YouTube. YouTube entrega los resultados como "lockupViewModel" (formato nuevo) o como
+# "videoRenderer" (formato anterior): se entienden los dos.
+MAX_RESULTADOS = 6
+FILTRO_EN_VIVO = 'EgJAAQ%253D%253D'   # el filtro "En vivo" de YouTube
+
+
+def _datos_iniciales(pagina):
+    i = pagina.find('ytInitialData = ')
+    if i < 0:
+        return None
+    try:
+        d, _ = json.JSONDecoder().raw_decode(pagina[i + len('ytInitialData = '):])
+        return d
+    except ValueError:
+        return None
+
+
+def _texto(t):
+    if not isinstance(t, dict):
+        return ''
+    return t.get('content') or t.get('simpleText') or ''.join(r.get('text', '') for r in t.get('runs', []))
+
+
+def _de_lockup(r):
+    vid = r.get('contentId', '')
+    if r.get('contentType') != 'LOCKUP_CONTENT_TYPE_VIDEO' or not RX_VIDEO.match(vid):
+        return None
+    md = (r.get('metadata') or {}).get('lockupMetadataViewModel') or {}
+    canal = detalle = ''
+    for fila in ((md.get('metadata') or {}).get('contentMetadataViewModel') or {}).get('metadataRows', []):
+        for parte in fila.get('metadataParts', []):
+            pila = (parte.get('avatarStack') or {}).get('avatarStackViewModel') or {}
+            t = _texto(parte.get('text')) or _texto(pila.get('text'))
+            if not canal and pila:
+                canal = t
+            elif t and not detalle and len(t) < 40 and re.search(r'\d', t):   # "997 lo están viendo", "hace 2 días"
+                detalle = t
+    if not canal:
+        etiqueta = ((md.get('image') or {}).get('decoratedAvatarViewModel') or {}).get('a11yLabel', '')
+        canal = re.sub(r'^Ir al canal\s*', '', etiqueta)
+    vivo = 'THUMBNAIL_OVERLAY_BADGE_STYLE_LIVE' in json.dumps(r.get('contentImage') or {})
+    return {'id': vid, 'titulo': _texto(md.get('title')), 'canal': canal, 'vivo': vivo, 'detalle': detalle}
+
+
+def _de_video_renderer(r):
+    vid = r.get('videoId', '')
+    if not RX_VIDEO.match(vid):
+        return None
+    marcas = json.dumps([r.get('badges') or [], r.get('thumbnailOverlays') or []])
+    vivo = 'BADGE_STYLE_TYPE_LIVE_NOW' in marcas or '"style": "LIVE"' in marcas
+    return {'id': vid, 'titulo': _texto(r.get('title')), 'canal': _texto(r.get('ownerText')), 'vivo': vivo,
+            'detalle': _texto(r.get('viewCountText')) or _texto(r.get('publishedTimeText'))}
+
+
+def resultados_busqueda(datos):
+    encontrados, vistos = [], set()
+
+    def recorrer(o):
+        if isinstance(o, dict):
+            for clave, leer in (('lockupViewModel', _de_lockup), ('videoRenderer', _de_video_renderer)):
+                if clave in o and isinstance(o[clave], dict):
+                    v = leer(o[clave])
+                    if v and v['id'] not in vistos:
+                        vistos.add(v['id'])
+                        encontrados.append(v)
+                    return
+            for x in o.values():
+                recorrer(x)
+        elif isinstance(o, list):
+            for x in o:
+                recorrer(x)
+    recorrer(datos)
+    return encontrados
+
+
+def buscar_youtube(texto, solo_vivo):
+    url = 'https://www.youtube.com/results?search_query=' + urllib.parse.quote_plus(texto)
+    if solo_vivo:
+        url += '&sp=' + FILTRO_EN_VIVO
+    pagina = bajar(url)
+    datos = _datos_iniciales(pagina)
+    if datos is None:
+        vigilar_pagina(pagina)
+        return {'error': 'no se pudo leer la página de resultados de YouTube'}
+    lista = [v for v in resultados_busqueda(datos) if v['vivo'] or not solo_vivo][:MAX_RESULTADOS]
+
+    # ¿El dueño permite verlo fuera de YouTube? (de a 3 a la vez; si YouTube no responde, queda "sin saber")
+    def revisar(v):
+        try:
+            info = info_video_recordada(v['id'])
+            v['incrustable'] = None if info.get('error') else info.get('incrustable', True)
+        except (urllib.error.URLError, OSError):
+            v['incrustable'] = None
+        v['miniatura'] = 'https://i.ytimg.com/vi/' + v['id'] + '/mqdefault.jpg'
+    hilos = []
+    for v in lista:
+        while sum(h.is_alive() for h in hilos) >= 3:
+            time.sleep(0.05)
+        h = threading.Thread(target=revisar, args=(v,), daemon=True)
+        h.start()
+        hilos.append(h)
+    for h in hilos:
+        h.join(30)
+    return {'resultados': lista}
+
+
 def info_directo(canal):
     # /channel/UC…/live lleva al directo que el canal transmite ahora (si no hay, muestra la página del canal)
     pagina = bajar('https://www.youtube.com/channel/' + canal + '/live')
@@ -737,9 +851,12 @@ class Manejador(SimpleHTTPRequestHandler):
             ruta = q['ruta'].lower()
             return recordado('canal:' + ruta, 7 * 86400, lambda: info_canal(ruta))
         if que == 'video' and RX_VIDEO.match(q.get('id', '')):
-            # Un video normal no cambia: se recuerda 6 h; los directos (y los que fueron directo), 10 min
-            return recordado('video:' + q['id'], lambda r: 600 if r.get('directo') or r.get('error') else 6 * 3600,
-                             lambda: info_video(q['id']))
+            return info_video_recordada(q['id'])
+        texto = ' '.join(q.get('q', '').split())
+        if que == 'buscar' and 0 < len(texto) <= 120:
+            vivo = q.get('vivo') == '1'
+            return recordado('buscar:%d:%s' % (vivo, texto.lower()), lambda r: 60 if r.get('error') else 600,
+                             lambda: buscar_youtube(texto, vivo))
         if que == 'canalhls' and re.match(r'^https?://', q.get('url', ''), re.IGNORECASE):
             return recordado('hls:' + q['url'], 600, lambda: revisar_hls(q['url']))
         if que == 'directo' and RX_CANAL.match(q.get('canal', '')):

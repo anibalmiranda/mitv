@@ -56,12 +56,32 @@ class Archivos(SimpleHTTPRequestHandler):
         pass
 
 
+def responde(navegador):
+    """¿El navegador sin ventana entrega una página? (una actualización de Edge dejó de hacerlo: se prueba el siguiente)"""
+    perfil = tempfile.mkdtemp(prefix='mitv-prueba-nav-')
+    try:
+        r = subprocess.run([navegador, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + perfil,
+                            '--dump-dom', 'data:text/html,<p id=ok>ok</p>'], capture_output=True, timeout=60)
+        return b'id="ok"' in r.stdout
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    finally:
+        shutil.rmtree(perfil, ignore_errors=True)
+
+
 def buscar_navegador():
-    for ruta in NAVEGADORES:
-        ruta = os.path.expandvars(ruta)
-        if os.path.isfile(ruta):
+    candidatos = [os.path.expandvars(r) for r in NAVEGADORES]
+    candidatos += [shutil.which(n) for n in ('msedge', 'chrome', 'google-chrome')]
+    vistos = set()
+    for ruta in candidatos:
+        if not ruta or ruta in vistos or not os.path.isfile(ruta):
+            continue
+        vistos.add(ruta)
+        if responde(ruta):
+            print('  Navegador de las pruebas: ' + ruta)
             return ruta
-    return shutil.which('msedge') or shutil.which('chrome') or shutil.which('google-chrome')
+        print('  (' + os.path.basename(ruta) + ' no responde sin ventana: pruebo otro)')
+    return None
 
 
 def pruebas_pagina(nombre, url, navegador):

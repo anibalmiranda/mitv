@@ -109,13 +109,17 @@ function abrirBuscar(celda) {
   $('buscarNuevaUrl').value = '';
   $('avisoBuscar').textContent = '';
   $('avisoBuscar').classList.remove('ok');
+  $('buscarResultados').innerHTML = '';
   fondoBuscar.classList.add('abierto');
   setTimeout(() => { $('buscarTexto').focus(); $('buscarTexto').select(); }, 50);
+  if (d.consulta) buscarAqui();   // busca solo al abrir, con lo que tenía registrado
 }
 function cerrarBuscar() {
   fondoBuscar.classList.remove('abierto');
   celdaBuscar = null;
+  busquedaN++;   // si quedó una búsqueda en curso, su respuesta ya no se muestra
 }
+// "ver más en YouTube ↗": los resultados completos en otra pestaña (copias la URL y la pegas abajo)
 function buscarEnYouTube() {
   const q = $('buscarTexto').value.trim();
   if (!q) { $('avisoBuscar').textContent = 'Escribe qué buscar.'; return; }
@@ -125,6 +129,89 @@ function buscarEnYouTube() {
   $('avisoBuscar').classList.add('ok');
   $('avisoBuscar').textContent = 'Resultados abiertos en otra pestaña. Copia la URL que te sirva, pégala abajo y elige Reemplazar o Agregar.';
   setTimeout(() => $('buscarNuevaUrl').focus(), 50);
+}
+
+// ---------- Búsqueda aquí mismo (servidor.py) ----------
+// Muestra los primeros 6 resultados como miniaturas, con EN VIVO y si el dueño permite verlo fuera de YouTube.
+// Un clic lo elige (queda su URL abajo), doble clic lo reemplaza al tiro. Los bloqueados no se pueden elegir.
+let busquedaN = 0;
+function avisoEnCaja(texto) {
+  const cont = $('buscarResultados');
+  cont.innerHTML = '';
+  const d = document.createElement('div');
+  d.className = 'buscando';
+  d.textContent = texto;
+  cont.appendChild(d);
+}
+async function buscarAqui() {
+  const q = $('buscarTexto').value.trim();
+  const av = $('avisoBuscar');
+  av.classList.remove('ok');
+  av.textContent = '';
+  if (!q) { av.textContent = 'Escribe qué buscar.'; return; }
+  const n = ++busquedaN;
+  const vivo = $('buscarSoloVivo').checked;
+  avisoEnCaja('⏳ Buscando "' + q + '"' + (vivo ? ' (solo en vivo)' : '') + ' y revisando los permisos…');
+  let d;
+  try { d = await api('buscar', { q, vivo: vivo ? '1' : '0' }); }
+  catch (e) {
+    if (n !== busquedaN) return;
+    $('buscarResultados').innerHTML = '';
+    av.textContent = 'No se pudo buscar aquí: ' + textoError(e) + '. Usa "ver más en YouTube ↗".';
+    return;
+  }
+  if (n !== busquedaN || !celdaBuscar) return;
+  pintarResultados(d.resultados || [], vivo);
+}
+function pintarResultados(lista, vivo) {
+  const cont = $('buscarResultados');
+  if (!lista.length) { avisoEnCaja('No encontré nada' + (vivo ? ' transmitiendo en vivo' : '') + '. Prueba con otras palabras.'); return; }
+  cont.innerHTML = '';
+  const kActual = clave(celdaBuscar.dataset.linea);
+  lista.forEach(v => {
+    const url = 'https://www.youtube.com/watch?v=' + v.id;
+    const it = document.createElement('button');
+    it.type = 'button';
+    it.className = 'resultado' + (v.incrustable === false ? ' bloqueado' : '');
+    const th = document.createElement('div');
+    th.className = 'thumb';
+    const img = document.createElement('img');
+    img.src = v.miniatura;
+    img.alt = '';
+    img.referrerPolicy = 'no-referrer';
+    th.appendChild(img);
+    if (v.vivo) { const b = document.createElement('span'); b.className = 'etq-vivo'; b.textContent = 'EN VIVO'; th.appendChild(b); }
+    if (clave(url) === kActual) { const b = document.createElement('span'); b.className = 'es-actual'; b.textContent = 'el que tienes'; th.appendChild(b); }
+    const t = document.createElement('div');
+    t.className = 't';
+    t.textContent = v.titulo;
+    const a = document.createElement('div');
+    a.className = 'a';
+    a.textContent = [v.canal, v.detalle].filter(Boolean).join(' · ');
+    const perm = document.createElement('div');
+    perm.className = 'permiso';
+    perm.textContent = v.incrustable === true ? '✅ Se puede ver aquí' : v.incrustable === false ? '🔒 Solo en YouTube (bloqueado por el dueño)'
+                                                                     : '❔ No se pudo revisar el permiso';
+    it.append(th, t, a, perm);
+    it.title = v.titulo + (v.canal ? ' — ' + v.canal : '');
+    const elegir = () => {
+      const av = $('avisoBuscar');
+      if (v.incrustable === false) {
+        av.classList.remove('ok');
+        av.textContent = 'El dueño de ese video no permite verlo fuera de YouTube: elige otro.';
+        return false;
+      }
+      cont.querySelectorAll('.resultado.elegido').forEach(x => x.classList.remove('elegido'));
+      it.classList.add('elegido');
+      $('buscarNuevaUrl').value = url;
+      av.classList.add('ok');
+      av.textContent = 'Elegido: ' + v.titulo + '. Ahora Reemplazar o + Agregar a la lista.';
+      return true;
+    };
+    it.addEventListener('click', elegir);
+    it.addEventListener('dblclick', () => { if (elegir()) reemplazarUrl(); });
+    cont.appendChild(it);
+  });
 }
 
 // Cambia la línea vieja por la nueva en TODAS las listas y en favoritos (mismo video = misma clave).
@@ -197,10 +284,12 @@ function agregarUrl() {
   mostrarMensaje('➕ Agregado a ' + destino + ', justo después del original');
 }
 
-$('btnBuscarYT').addEventListener('click', buscarEnYouTube);
+$('btnBuscarYT').addEventListener('click', buscarAqui);
+$('buscarAbrirYT').addEventListener('click', e => { e.preventDefault(); buscarEnYouTube(); });
+$('buscarSoloVivo').addEventListener('change', () => { if ($('buscarTexto').value.trim()) buscarAqui(); });
 $('btnBuscarReemplazar').addEventListener('click', reemplazarUrl);
 $('btnBuscarAgregar').addEventListener('click', agregarUrl);
 $('btnBuscarCerrar').addEventListener('click', cerrarBuscar);
 fondoBuscar.addEventListener('click', e => { if (e.target === fondoBuscar) cerrarBuscar(); });
-$('buscarTexto').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); buscarEnYouTube(); } });
+$('buscarTexto').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); buscarAqui(); } });
 $('buscarNuevaUrl').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); reemplazarUrl(); } });

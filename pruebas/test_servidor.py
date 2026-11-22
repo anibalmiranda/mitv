@@ -149,6 +149,67 @@ class FrenoDeYouTube(unittest.TestCase):
         self.assertEqual(normal, {'directo': False})
 
 
+class BusquedaEnYouTube(unittest.TestCase):
+    """🔍 Buscar parecido: los resultados de YouTube, en su formato nuevo y en el anterior."""
+
+    LOCKUP = {'lockupViewModel': {
+        'contentId': 'h5efji0_wtQ', 'contentType': 'LOCKUP_CONTENT_TYPE_VIDEO',
+        'contentImage': {'thumbnailViewModel': {'overlays': [{'thumbnailBottomOverlayViewModel': {'badges': [
+            {'thumbnailBadgeViewModel': {'text': 'EN VIVO', 'badgeStyle': 'THUMBNAIL_OVERLAY_BADGE_STYLE_LIVE'}}]}}]}},
+        'metadata': {'lockupMetadataViewModel': {
+            'title': {'content': 'EN VIVO: Noticias de Chile y el mundo'},
+            'metadata': {'contentMetadataViewModel': {'metadataRows': [{'metadataParts': [
+                {'avatarStack': {'avatarStackViewModel': {'text': {'content': 'Teletrece'}}}},
+                {'text': {'content': '997 lo están viendo'}},
+                {'text': {'content': 'Una descripción larga que no es el detalle del video, porque tiene muchas letras'}}]}]}}}}}}
+    RENDERER = {'videoRenderer': {
+        'videoId': 'abcdefghijk', 'title': {'runs': [{'text': 'Video '}, {'text': 'anterior'}]},
+        'ownerText': {'runs': [{'text': 'Canal X'}]}, 'viewCountText': {'simpleText': '10 vistas'}}}
+    LISTA = {'lockupViewModel': {'contentId': 'PLxxxxxxxx', 'contentType': 'LOCKUP_CONTENT_TYPE_PLAYLIST'}}
+
+    def pagina(self):
+        datos = {'contents': [self.LOCKUP, self.LISTA, self.RENDERER, self.LOCKUP]}
+        return '<script>var ytInitialData = ' + json.dumps(datos) + ';</script>'
+
+    def test_lee_los_dos_formatos_sin_repetir_ni_listas(self):
+        r = servidor.resultados_busqueda(servidor._datos_iniciales(self.pagina()))
+        self.assertEqual(r, [
+            {'id': 'h5efji0_wtQ', 'titulo': 'EN VIVO: Noticias de Chile y el mundo', 'canal': 'Teletrece', 'vivo': True,
+             'detalle': '997 lo están viendo'},
+            {'id': 'abcdefghijk', 'titulo': 'Video anterior', 'canal': 'Canal X', 'vivo': False, 'detalle': '10 vistas'}])
+
+    def test_busqueda_filtra_en_vivo_y_dice_si_se_puede_incrustar(self):
+        pedidas = []
+        def bajar(url):
+            pedidas.append(url)
+            return self.pagina()
+        original_bajar, original_info = servidor.bajar, servidor.info_video
+        servidor.bajar = bajar
+        servidor.info_video = lambda vid: {'incrustable': vid != 'h5efji0_wtQ'}
+        servidor._cache.clear()
+        try:
+            r = servidor.buscar_youtube('teletrece en vivo', True)['resultados']
+            self.assertIn('sp=' + servidor.FILTRO_EN_VIVO, pedidas[0])
+            self.assertEqual([v['id'] for v in r], ['h5efji0_wtQ'], 'solo los que están en vivo')
+            self.assertIs(r[0]['incrustable'], False, 'el dueño no permite verlo fuera de YouTube')
+            self.assertEqual(r[0]['miniatura'], 'https://i.ytimg.com/vi/h5efji0_wtQ/mqdefault.jpg')
+            todos = servidor.buscar_youtube('teletrece', False)['resultados']
+            self.assertEqual([v['incrustable'] for v in todos], [False, True])
+        finally:
+            servidor.bajar, servidor.info_video = original_bajar, original_info
+            servidor._cache.clear()
+
+    def test_pagina_sin_resultados_legibles(self):
+        original = servidor.bajar
+        servidor.bajar = lambda url: '<html>página nueva sin datos</html>'
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertIn('error', servidor.buscar_youtube('algo', False))
+        finally:
+            servidor.bajar = original
+            servidor.fijar_salud('ok')
+
+
 class DatosEnArchivo(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp(prefix='mitv-prueba-')
