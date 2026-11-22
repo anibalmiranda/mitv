@@ -782,3 +782,16 @@ body.modo-audio .celda .carga-tv { display: none; }
 .celda:hover .compartir { opacity: 1; }
 .celda.camara .compartir { right: 166px; }   /* las cámaras no tienen 🔍 ni 🎵 */
 body.modo-audio .celda .compartir { display: none; }
+
+/* Ampliado: ✕ en la esquina cierra y vuelve a la grilla; 🗑 (quitar) pasa a su lado y el ⤡ sobra */
+.celda .cerrar-max {
+  position: absolute; top: 6px; right: 6px; z-index: 4; display: none;
+  width: 26px; height: 26px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(0,0,0,.65); color: #fff; font-size: 15px; line-height: 26px;
+  opacity: 0; transition: opacity .15s;
+}
+.celda.max .cerrar-max { display: block; }
+.celda:hover .cerrar-max { opacity: 1; }
+.celda.max .maximizar { display: none; }
+.celda.max .quitar { right: 38px; }
+.celda .quitar { font-size: 13px; }

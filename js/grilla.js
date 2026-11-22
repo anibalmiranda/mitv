@@ -266,6 +266,14 @@ function render(reutilizar) {
       bMax.addEventListener('click', () => alternarMax(celda));
       celda.appendChild(bMax);
 
+      // ✕ Solo en el ampliado: cierra y vuelve a la grilla (como Esc). Quitar el canal es 🗑
+      const bCerrar = document.createElement('button');
+      bCerrar.className = 'cerrar-max';
+      bCerrar.textContent = '✕';
+      bCerrar.title = 'Cerrar y volver a la grilla (Esc)';
+      bCerrar.addEventListener('click', () => restaurarTodo());
+      celda.appendChild(bCerrar);
+
       const bBuscar = document.createElement('button');
       bBuscar.className = 'buscar';
       bBuscar.title = 'Buscar algo parecido en YouTube (por si dejó de transmitir o cambió de URL)';
@@ -283,14 +291,14 @@ function render(reutilizar) {
 
     const btn = document.createElement('button');
     btn.className = 'quitar';
-    btn.title = config.vistaFav ? 'Quitar de favoritos' : 'Quitar';
-    btn.textContent = '✕';
+    btn.title = config.vistaFav ? 'Quitar de favoritos' : 'Quitar de la lista';
+    btn.textContent = '🗑';
     // En la vista ampliada pide confirmar (segundo clic); en la grilla quita al tiro
     btn.addEventListener('click', () => {
       if (celda.classList.contains('max') && !btn.classList.contains('confirmar')) {
         btn.classList.add('confirmar');
         btn.textContent = '¿Quitar este canal? Clic de nuevo';
-        btn._timer = setTimeout(() => { btn.classList.remove('confirmar'); btn.textContent = '✕'; }, 3500);
+        btn._timer = setTimeout(() => { btn.classList.remove('confirmar'); btn.textContent = '🗑'; }, 3500);
         return;
       }
       clearTimeout(btn._timer);
