@@ -542,6 +542,28 @@ prueba('"▶ Ver en YouTube": ventana chica encima del cuadro y de su tamaño', 
     w.restaurarTodo();
   } finally { w.open = original; }
 });
+prueba('ventana de YouTube abierta: Multi YouTube en silencio; al cerrarla vuelve el audio', async () => {
+  const original = w.open;
+  const falsa = { closed: false, moveTo() {}, resizeTo() {}, focus() {} };
+  w.open = () => falsa;
+  try {
+    if (!c().some(x => x.dataset.mute === '0')) w.alternarAudio(c()[0]);
+    const sonaba = c().find(x => x.dataset.mute === '0');
+    w.verEnYouTube(c()[1]);
+    igual(c().filter(x => x.dataset.mute === '0').length, 0, 'al abrir la ventana se silencia todo');
+    cierto(d.getElementById('btnMuteGeneral').classList.contains('activo'), 'como el botón de silenciar todo');
+    falsa.closed = true;
+    await espera(1500);
+    igual(sonaba.dataset.mute, '0', 'al cerrarla vuelve el audio al que sonaba');
+    // Si activaste el sonido a mano mientras estaba abierta, al cerrarla no se toca
+    falsa.closed = false;
+    w.verEnYouTube(c()[1]);
+    w.alternarAudio(c()[2]);
+    falsa.closed = true;
+    await espera(1500);
+    igual(c().filter(x => x.dataset.mute === '0').map(x => c().indexOf(x)), [2], 'sigue sonando el que elegiste');
+  } finally { w.open = original; }
+});
 prueba('video bloqueado fuera de YouTube (101/150): cuadro útil y sin audio', () => {
   w.marcarCaido(c()[2], 150);
   cierto(c()[2]._externo && c()[2].querySelector('.aviso-externo'));

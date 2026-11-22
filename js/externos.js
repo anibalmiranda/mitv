@@ -77,6 +77,39 @@ function verEnYouTube(celda) {
   if (!v) { mostrarMensaje('El navegador bloqueó la ventana: permite las ventanas emergentes para esta página'); return; }
   try { v.moveTo(pos.x, pos.y); v.resizeTo(pos.ancho, pos.alto); } catch (e) { }   // la reutilizada también se acomoda
   v.focus();
+  silenciarPorVentana(v);
+}
+
+// Mientras la ventana de YouTube está abierta, Multi YouTube queda en silencio (si no, se oyen los dos). Al cerrarla
+// vuelve el audio a lo que sonaba, salvo que mientras tanto hayas activado el sonido a mano.
+const REVISION_VENTANA_MS = 1000;
+let ventanaYT = { ventana: null, silencio: '', timer: null };   // silencio: '' | 'grilla' | 'fondo'
+function silenciarPorVentana(v) {
+  ventanaYT.ventana = v;
+  // Cada vez que se abre (también si ya estaba abierta y volviste a activar el sonido a mano)
+  let silencio = '';
+  if (fondoActivo) {
+    if (!fondoSilenciado) { alternarSilencioFondo(); silencio = 'fondo'; }
+  } else if (!silencioGeneral && celdas.some(c => c.dataset.mute === '0')) {
+    btnMuteGeneral.click();
+    silencio = 'grilla';
+  }
+  if (silencio) {
+    ventanaYT.silencio = silencio;
+    mostrarMensaje('🔇 Multi YouTube en silencio mientras ves la ventana de YouTube');
+  }
+  clearInterval(ventanaYT.timer);
+  ventanaYT.timer = setInterval(() => { if (!ventanaYT.ventana || ventanaYT.ventana.closed) ventanaCerrada(); }, REVISION_VENTANA_MS);
+}
+function ventanaCerrada() {
+  clearInterval(ventanaYT.timer);
+  const s = ventanaYT.silencio;
+  ventanaYT = { ventana: null, silencio: '', timer: null };
+  // Solo si sigue el silencio que puso la ventana (si activaste el sonido a mano, no se toca)
+  if (s === 'grilla' && silencioGeneral && !fondoActivo) btnMuteGeneral.click();
+  else if (s === 'fondo' && fondoActivo && fondoSilenciado) alternarSilencioFondo();
+  else return;
+  mostrarMensaje('🔊 Se cerró la ventana de YouTube: vuelve el audio de Multi YouTube');
 }
 // Dónde va la ventana: sobre el cuadro, de su tamaño (mín. 480 × 300). Con el cuadro ampliado (ocupa toda la
 // pantalla) se limita al 70% de la pantalla, centrada sobre él.
