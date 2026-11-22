@@ -510,6 +510,31 @@ prueba('canal de rudo.video: iframe con su página y audio exclusivo recargándo
     cambiarLista('A'); await espera(1500);
   }
 });
+prueba('"▶ Ver en YouTube": ventana chica encima del cuadro y de su tamaño', () => {
+  const abiertas = [];
+  const original = w.open;
+  w.open = (url, nombre, opciones) => {
+    const o = Object.fromEntries(opciones.split(',').filter(x => x.includes('=')).map(x => x.split('=')).map(([k, v]) => [k, Number(v)]));
+    abiertas.push({ url, nombre, o, movida: null });
+    return { moveTo: (x, y) => { abiertas[abiertas.length - 1].movida = [x, y]; }, resizeTo: () => {}, focus: () => {} };
+  };
+  try {
+    const celda = c()[0];
+    const r = celda.getBoundingClientRect();
+    w.verEnYouTube(celda);
+    const a = abiertas[0];
+    cierto(a.url.startsWith('https://www.youtube.com/'), 'abre YouTube');
+    igual(a.nombre, 'multiyoutube-youtube', 'siempre la misma ventana');
+    igual([a.o.width, a.o.height], [Math.max(480, Math.round(r.width)), Math.max(300, Math.round(r.height))], 'del tamaño del cuadro (mín. 480 × 300)');
+    igual(a.movida, [a.o.left, a.o.top], 'si ya estaba abierta, se mueve al cuadro');
+    w.alternarMax(celda);
+    w.verEnYouTube(celda);
+    const b = abiertas[1];
+    cierto(b.o.width <= Math.round(w.screen.availWidth * 0.7) && b.o.height <= Math.round(w.screen.availHeight * 0.7),
+           'con el cuadro ampliado no tapa toda la pantalla');
+    w.restaurarTodo();
+  } finally { w.open = original; }
+});
 prueba('video bloqueado fuera de YouTube (101/150): cuadro útil y sin audio', () => {
   w.marcarCaido(c()[2], 150);
   cierto(c()[2]._externo && c()[2].querySelector('.aviso-externo'));

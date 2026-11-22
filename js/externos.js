@@ -2,7 +2,7 @@
 // Videos y directos cuyo dueño no deja verlos fuera de youtube.com (errores 101 / 150 del reproductor).
 // YouTube los bloquea en cualquier página: no se pueden reproducir en la grilla. En vez de un aviso inútil,
 // el cuadro muestra la imagen en vivo que publica YouTube (se refresca sola) y un botón para verlo en YouTube,
-// en una ventana aparte que se reutiliza. No le quita el audio al video que suena.
+// en una ventana chica aparte, encima del cuadro y de su tamaño, que se reutiliza. No le quita el audio al video que suena.
 // Se recuerda (config.nombres[clave].externo) para no gastar conexiones intentando cargarlo cada vez; se vuelve
 // a intentar una vez al día por si el canal lo permite de nuevo, o a mano con "reintentar aquí".
 // Los archivos se cargan en orden desde index.html y comparten variables (scripts clásicos).
@@ -70,10 +70,37 @@ function verEnYouTube(celda) {
   let url = urlOriginal(celda.dataset.linea);
   if (p && p.tipo === 'canal') url = 'https://www.youtube.com/channel/' + encodeURIComponent(p.id) + '/live';
   if (!url) return;
-  // Siempre la misma ventana: si ya estaba abierta, se reutiliza
-  const v = window.open(url, 'multiyoutube-youtube', 'popup,width=1100,height=650');
-  if (v) v.focus();
-  else mostrarMensaje('El navegador bloqueó la ventana: permite las ventanas emergentes para esta página');
+  // Siempre la misma ventana chica (si ya estaba abierta, se reutiliza), justo encima del cuadro y de su tamaño
+  const pos = posicionVentana(celda);
+  const v = window.open(url, 'multiyoutube-youtube',
+                        'popup,width=' + pos.ancho + ',height=' + pos.alto + ',left=' + pos.x + ',top=' + pos.y);
+  if (!v) { mostrarMensaje('El navegador bloqueó la ventana: permite las ventanas emergentes para esta página'); return; }
+  try { v.moveTo(pos.x, pos.y); v.resizeTo(pos.ancho, pos.alto); } catch (e) { }   // la reutilizada también se acomoda
+  v.focus();
+}
+// Dónde va la ventana: sobre el cuadro, de su tamaño (mín. 480 × 300). Con el cuadro ampliado (ocupa toda la
+// pantalla) se limita al 70% de la pantalla, centrada sobre él.
+const VENTANA_MIN = { ancho: 480, alto: 300 };
+const VENTANA_MAX_AMPLIADO = 0.7;
+function posicionVentana(celda) {
+  const r = celda.getBoundingClientRect();
+  // Bordes del navegador (barra de pestañas y direcciones); en pantalla completa no hay
+  const bordeX = Math.max(0, (window.outerWidth - window.innerWidth) / 2);
+  const bordeY = Math.max(0, window.outerHeight - window.innerHeight - bordeX);
+  let ancho = Math.max(VENTANA_MIN.ancho, Math.round(r.width));
+  let alto = Math.max(VENTANA_MIN.alto, Math.round(r.height));
+  let x = window.screenX + bordeX + r.left, y = window.screenY + bordeY + r.top;
+  if (celda.classList.contains('max')) {
+    const maxAncho = Math.round(screen.availWidth * VENTANA_MAX_AMPLIADO), maxAlto = Math.round(screen.availHeight * VENTANA_MAX_AMPLIADO);
+    if (ancho > maxAncho || alto > maxAlto) {
+      const f = Math.min(maxAncho / ancho, maxAlto / alto);
+      x += (ancho - ancho * f) / 2;
+      y += (alto - alto * f) / 2;
+      ancho = Math.round(ancho * f);
+      alto = Math.round(alto * f);
+    }
+  }
+  return { x: Math.round(x), y: Math.round(y), ancho, alto };
 }
 
 function reintentarAqui(celda) {
