@@ -71,7 +71,7 @@ function armarTira() {
     const th = document.createElement('div');
     th.className = 'thumb';
     if (c.dataset.thumb) th.style.backgroundImage = 'url("' + c.dataset.thumb + '")';
-    else th.textContent = c.dataset.tipo === 'canal' ? '📡' : c.dataset.tipo === 'camara' ? '📷' : c.dataset.tipo === 'rudo' ? '📺' : '▶';
+    else th.textContent = c.dataset.tipo === 'canal' ? '📡' : c.dataset.tipo === 'camara' ? '📷' : c.dataset.tipo === 'rudo' ? '📺' : c.dataset.tipo === 'spotify' ? '🎵' : '▶';
     if (c.classList.contains('en-vivo')) {
       const v = document.createElement('span');
       v.className = 'etq-vivo';

@@ -38,6 +38,7 @@ function alternarFondoCelda(celda) {
   const linea = celda.dataset.linea;
   if (!clave(linea)) return;
   if (celda.dataset.tipo === 'rudo') { mostrarMensaje('🎵 Los canales de rudo.video no se pueden usar de audio de fondo'); return; }
+  if (celda.dataset.tipo === 'spotify') { mostrarMensaje('🎵 Spotify no se puede usar de audio de fondo (dale ▶ en su cuadro)'); return; }
   if (esFondo(linea)) {
     config.fondoAudio = '';
     config.fondoActivo = false;
@@ -102,7 +103,7 @@ function crearReproductorFondo() {
   }
   vaciarFondo();
   const item = parsear(config.fondoAudio);
-  if (!item || item.tipo === 'error' || item.tipo === 'camara' || item.tipo === 'rudo') return;
+  if (!item || item.tipo === 'error' || item.tipo === 'camara' || item.tipo === 'rudo' || item.tipo === 'spotify') return;
   if (item.tipo === 'hls') {   // canal de TV o radio por HLS (tv.js)
     const v = videoTvSuelto(item.id, !huboGesto || fondoSilenciado);
     v.volume = volumenFondo() / 100;

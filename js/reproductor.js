@@ -14,7 +14,8 @@ function comandoYT(iframe, func, args) {
     args = [];
   }
   if (iframe.tagName === 'VIDEO') { comandoVideo(iframe, func, args || []); return; }
-  if (esRudo(iframe)) { comandoRudo(iframe, func); return; }   // rudo.video no acepta órdenes (rudo.js)
+  if (esRudo(iframe)) { comandoRudo(iframe, func); return; }
+  if (esSpotify(iframe)) { comandoSpotify(iframe, func); return; }   // Spotify no acepta las órdenes de YouTube (spotify.js)   // rudo.video no acepta órdenes (rudo.js)
   if (!iframe.contentWindow) return;
   iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: func, args: args || [] }), '*');
 }

@@ -757,6 +757,12 @@ body.modo-audio .celda .carga-tv { display: none; }
    (la barra de su reproductor queda al alcance del mouse, como la de YouTube) */
 .celda.rudo .volumen, .celda.rudo .fondo { display: none !important; }
 
+/* Spotify (spotify.js): sin volumen propio ni audio de fondo. La capa de clic cubre solo la carátula (izquierda):
+   el resto de su reproductor (▶, lista de canciones) queda al alcance del mouse */
+.celda.spotify .volumen, .celda.spotify .fondo { display: none !important; }
+.celda.spotify .capa-audio { right: 62%; bottom: 0; }
+.celda.spotify iframe { background: #121212; }
+
 /* Programas ⏰ en el ⚙ (programas.js): hora, días, canal */
 #listaProgramas { display: flex; flex-direction: column; gap: 6px; flex-basis: 100%; order: 1; }
 #listaProgramas:empty { display: none; }

@@ -53,6 +53,22 @@ prueba('cámaras IP: cualquier http(s) que no sea YouTube', () => {
   igual(p('http://200.54.42.127:8090/mjpg/video.mjpg'), { tipo: 'camara', id: 'http://200.54.42.127:8090/mjpg/video.mjpg' });
   igual(parsear('200.54.42.127:8090/mjpg/video.mjpg').tipo, 'error', 'sin http:// no se toma como cámara');
 });
+prueba('Spotify: playlist, álbum, canción, con idioma o URI de la aplicación', () => {
+  const ID = '37i9dQZF1DXcBWIGoYBM5M';
+  igual(p('https://open.spotify.com/playlist/' + ID + '?si=abc'), { tipo: 'spotify', id: 'playlist/' + ID });
+  igual(p('open.spotify.com/intl-es/album/' + ID), { tipo: 'spotify', id: 'album/' + ID }, 'con idioma y sin https');
+  igual(p('https://open.spotify.com/embed/track/' + ID), { tipo: 'spotify', id: 'track/' + ID }, 'el link de incrustar');
+  igual(p('spotify:playlist:' + ID), { tipo: 'spotify', id: 'playlist/' + ID }, 'URI de la aplicación de escritorio');
+  igual(urlEmbed(parsear('spotify:show:' + ID), true, false), 'https://open.spotify.com/embed/show/' + ID + '?utm_source=generator');
+  igual(nombreInicial(parsear('spotify:album:' + ID), 0), 'Álbum de Spotify');
+  igual(clave('https://open.spotify.com/playlist/' + ID), clave('spotify:playlist:' + ID), 'misma clave (no se repite)');
+});
+prueba('YouTube Music: playlists por list= o por su página browse/VL…', () => {
+  igual(parsear('https://music.youtube.com/playlist?list=PLabc123').id, 'PLabc123');
+  igual(parsear('https://music.youtube.com/playlist?list=OLAK5uy_abc').tipo, 'lista', 'álbum (link de Compartir)');
+  igual(parsear('https://music.youtube.com/browse/VLPLabc123'), { tipo: 'lista', id: 'PLabc123', video: '', mix: false });
+  igual(parsear('https://music.youtube.com/browse/MPREb_xyz').tipo, 'error', 'álbum por browse: pide el link de Compartir');
+});
 prueba('canales de rudo.video: su página oficial', () => {
   igual(p('https://rudo.video/live/TVN'), { tipo: 'rudo', id: 'tvn' });
   igual(p('rudo.video/live/t13?x=1'), { tipo: 'rudo', id: 't13' }, 'sin https y con parámetros');

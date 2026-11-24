@@ -9,6 +9,9 @@ function parsear(linea) {
 
   // ID pelado de 11 caracteres
   if (/^[\w-]{11}$/.test(s)) return { tipo: 'video', id: s };
+  // URI de Spotify ("spotify:playlist:…", lo que copia la aplicación de escritorio)
+  const uri = /^spotify:([a-z]+):([A-Za-z0-9]{22})$/.exec(s);
+  if (uri && TIPOS_SPOTIFY.includes(uri[1])) return { tipo: 'spotify', id: uri[1] + '/' + uri[2] };
   // @handle pelado (por ejemplo "@LofiGirl")
   if (s.startsWith('@')) return canalPorRuta(s.split(/[\/?#\s]/)[0], s);
 
@@ -38,6 +41,15 @@ function parsear(linea) {
     // youtube.com/@nombre (también /@nombre/live, /streams...), /c/nombre y /user/nombre: canal en vivo
     if (partes[0] && partes[0].startsWith('@')) return canalPorRuta(partes[0], s);
     if (['c', 'user'].includes(partes[0]) && partes[1]) return canalPorRuta(partes[0] + '/' + partes[1], s);
+    // YouTube Music: music.youtube.com/browse/VL<lista> es la página de una playlist
+    if (partes[0] === 'browse' && /^VL[\w-]+$/.test(partes[1] || '')) return { tipo: 'lista', id: partes[1].slice(2), video: '', mix: false };
+    if (partes[0] === 'browse' && partes[1])
+      return { tipo: 'error', original: s, motivo: 'De YouTube Music usa el link de "Compartir" (el que trae list=)' };
+  }
+  // Spotify: playlist, álbum, canción, artista, podcast o episodio, en su reproductor oficial (spotify.js)
+  if (host === 'open.spotify.com') {
+    const i = partes.findIndex(x => TIPOS_SPOTIFY.includes(x));   // salta "intl-es" y "embed"
+    if (i >= 0 && /^[A-Za-z0-9]{22}$/.test(partes[i + 1] || '')) return { tipo: 'spotify', id: partes[i] + '/' + partes[i + 1] };
   }
   // Canal de rudo.video (TVN, Mega, T13…): su página oficial en un iframe (rudo.js)
   if (host === 'rudo.video' && partes[0] === 'live' && /^[\w-]+$/.test(partes[1] || ''))
@@ -122,8 +134,12 @@ function urlEmbed(item, muteado, autoplay) {
     return 'https://www.youtube.com/embed/videoseries?' + p.toString();
   }
   if (item.tipo === 'rudo') return 'https://rudo.video/live/' + encodeURIComponent(item.id);   // su página, sin parámetros
+  if (item.tipo === 'spotify') return 'https://open.spotify.com/embed/' + item.id + '?utm_source=generator';
   return null;
 }
+
+const TIPOS_SPOTIFY = ['playlist', 'album', 'track', 'artist', 'show', 'episode'];
+const NOMBRES_SPOTIFY = { playlist: 'Playlist', album: 'Álbum', track: 'Canción', artist: 'Artista', show: 'Podcast', episode: 'Episodio' };
 
 function urlIpcamlive(alias) { return 'https://g3.ipcamlive.com/player/player.php?alias=' + encodeURIComponent(alias) + '&autoplay=1'; }
 // Cámara que se muestra con el reproductor de su página (ipcamlive) en vez de un stream de imagen
@@ -140,6 +156,7 @@ function nombreInicial(item, idx) {
     try { return 'Cámara ' + new URL(item.id).host; } catch (e) { return 'Cámara'; }
   }
   if (item.tipo === 'rudo') return item.id.toUpperCase() + ' (rudo.video)';
+  if (item.tipo === 'spotify') return NOMBRES_SPOTIFY[item.id.split('/')[0]] + ' de Spotify';
   if (item.tipo === 'canal') return 'Canal en vivo ' + (item.ruta || item.id);
   if (item.tipo === 'lista') return 'Lista ' + item.id;
   return 'Video ' + (idx + 1) + ' (' + item.id + ')';

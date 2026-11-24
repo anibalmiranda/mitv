@@ -575,6 +575,34 @@ prueba('canal de rudo.video: iframe con su página y audio exclusivo recargándo
     cambiarLista('A'); await espera(1500);
   }
 });
+prueba('Spotify: su reproductor oficial y audio exclusivo (al perder el audio se detiene)', async () => {
+  const S = 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M', Y = 'https://www.youtube.com/watch?v=' + 'spotprueba1';
+  w.eval('config.listas["S"] = ' + JSON.stringify([Y, S]) + '; config.actual = "S"; config.mute = true');
+  w.pintarSelector(); w.render(true); await espera(1500);
+  try {
+    const [y, sp] = c();
+    const ifr = sp.querySelector('iframe');
+    cierto(sp.classList.contains('spotify'), 'cuadro de Spotify');
+    igual(ifr.src, 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator', 'su reproductor para incrustar');
+    igual(w.getComputedStyle(sp.querySelector('.volumen')).display, 'none', 'sin volumen propio');
+    igual(sp.querySelector('.fila-audio .titulo').textContent, 'Playlist de Spotify');
+    // Le diste ▶ dentro de su reproductor (la ventana pierde el foco y el iframe queda activo): recibe el audio
+    ifr.focus(); w.dispatchEvent(new w.Event('blur')); await espera(50);
+    if (d.activeElement === ifr) igual(sp.dataset.mute, '0', 'tocar su reproductor le da el audio');
+    else { w.alternarAudio(sp); sp._spotifyTocado = true; }
+    // El audio pasa a otro cuadro: como no ha contestado mensajes, se recarga (eso lo detiene)
+    let recargas = 0;
+    new w.MutationObserver(m => { recargas += m.length; }).observe(ifr, { attributes: true, attributeFilter: ['src'] });
+    w.alternarAudio(y);
+    igual(sp.dataset.mute, '1', 'pierde el audio');
+    await espera(100);
+    igual(recargas, 1, 'se detuvo recargándolo');
+    w.comandoYT(ifr, 'mute'); await espera(100);
+    igual(recargas, 1, 'otro "silenciar" no lo vuelve a recargar');
+  } finally {
+    cambiarLista('A'); await espera(1500);
+  }
+});
 prueba('"▶ Ver en YouTube": ventana chica encima del cuadro y de su tamaño', () => {
   const abiertas = [];
   const original = w.open;
