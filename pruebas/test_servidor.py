@@ -428,7 +428,6 @@ class CanalesHLS(unittest.TestCase):
         self.assertIn('#EXTINF:6,', r)
 
 
-@unittest.skipUnless(CON_INTERNET, 'solo con --internet')
 class ConexionesCortadas(unittest.TestCase):
     """Si el navegador corta la conexión antes de la respuesta, la consola no se llena de errores."""
 
@@ -453,6 +452,7 @@ class ConexionesCortadas(unittest.TestCase):
         self.assertIn('ValueError', self.anotado(ValueError('de verdad')))
 
 
+@unittest.skipUnless(CON_INTERNET, 'solo con --internet')
 class YouTubeDeVerdad(unittest.TestCase):
     def test_canario(self):
         servidor.revisar_salud()

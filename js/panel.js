@@ -167,8 +167,18 @@ function huellaRender() {
   return JSON.stringify([vistaId(), fuente(), config.autoplay, config.mute, config.inicioAleatorio]);
 }
 
+// Deja una sola vez cada video o canal (el primero; misma clave aunque la URL se escriba distinto).
+// Los comentarios y las líneas que no se reconocen no se tocan. Devuelve { lineas, quitadas }.
+function quitarRepetidas(lineas) {
+  const vistos = new Set();
+  const quedan = lineas.filter(l => { const k = clave(l); if (!k) return true; if (vistos.has(k)) return false; vistos.add(k); return true; });
+  return { lineas: quedan, quitadas: lineas.length - quedan.length };
+}
+
 function guardarPanel() {
-  const lineas = txt.value.split(/\r?\n/).map(l => l.trim()).filter(l => l.length);
+  let lineas = txt.value.split(/\r?\n/).map(l => l.trim()).filter(l => l.length);
+  let repetidas = 0;
+  if (!config.vistaFav) ({ lineas, quitadas: repetidas } = quitarRepetidas(lineas));
   const huellaAntes = huellaRender();
   const ajustesReproductor = () => JSON.stringify([config.autoplay, config.mute, config.inicioAleatorio]);
   const ajustesAntes = ajustesReproductor();
@@ -229,6 +239,7 @@ function guardarPanel() {
   else { programarPausaOcultos(); reiniciarCarrusel(); pintarCarrusel(); actualizarCarga(); }
   pintarSelector();
 
+  if (repetidas) mostrarMensaje('✂ Se quitaron ' + repetidas + (repetidas === 1 ? ' URL repetida' : ' URLs repetidas') + ' de la lista (quedó una de cada una)');
   const malas = lineas.map(parsear).filter(x => x && x.tipo === 'error' && !x.pendiente);   // @handle en búsqueda no cuentan
   if (malas.length) {
     aviso.textContent = `Ojo: ${malas.length} línea(s) no se reconocieron (aparecen marcadas en la grilla).`;

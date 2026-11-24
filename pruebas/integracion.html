@@ -659,6 +659,22 @@ prueba('eliminar un grupo completo no toca la lista suelta con el mismo nombre',
   igual(w.eval('config.tv["hls:https://x.invalid/1.m3u8"]'), undefined, 'se limpian los datos de canales sin uso');
   cambiarLista('A');
 });
+prueba('al guardar una lista se quitan las URLs repetidas (queda la primera)', async () => {
+  w.eval('config.listas["R"] = []; config.actual = "R"; config.vistaFav = false');
+  w.pintarSelector(); w.render(true);
+  w.abrirPanel();
+  d.getElementById('urls').value = [
+    '# comentario', 'https://www.youtube.com/watch?v=rrrrrrrrrr1', 'https://youtu.be/rrrrrrrrrr1',
+    'https://www.youtube.com/watch?v=rrrrrrrrrr2', '# comentario', 'rrrrrrrrrr1', 'esto no es url', 'esto no es url',
+  ].join('\n');
+  w.guardarPanel();
+  igual(w.eval('config.listas.R'), ['# comentario', 'https://www.youtube.com/watch?v=rrrrrrrrrr1',
+    'https://www.youtube.com/watch?v=rrrrrrrrrr2', '# comentario', 'esto no es url', 'esto no es url'],
+    'los comentarios y las líneas no reconocidas no se tocan');
+  cierto(/2 URLs repetidas/.test(d.getElementById('indicador').textContent), d.getElementById('indicador').textContent);
+  await espera(2000);
+  cambiarLista('A');
+});
 prueba('mover y copiar un cuadro a otra lista (sin duplicar)', async () => {
   w.eval('config.listas["M1"] = ["https://www.youtube.com/watch?v=mmmmmmmmmm1", "https://www.youtube.com/watch?v=mmmmmmmmmm2"]; ' +
          'config.listas["M2"] = ["https://youtu.be/mmmmmmmmmm2"]; config.actual = "M1"');
