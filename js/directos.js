@@ -111,8 +111,11 @@ function vigilarDirecto(celda, info) {
 async function revisarDirecto(celda) {
   const p = parsear(celda.dataset.linea);
   if (!p || p.tipo !== 'video' || celda._revisandoDirecto || servidorOk === false) return;
-  celda._revisandoDirecto = true;
   clearTimeout(celda._timerDirecto);
+  // Viendo un solo canal (o en ahorro): los cuadros de atrás no consultan a YouTube; se revisan al volver
+  if (enEnfoque() && !celda.classList.contains('max')) { celda._directoPendiente = true; return; }
+  celda._directoPendiente = false;
+  celda._revisandoDirecto = true;
   const linea = celda.dataset.linea;
   const k = clave(linea);
   try {
@@ -232,10 +235,11 @@ async function buscarDirectoActual() {
 $('btnBuscarDirecto').addEventListener('click', buscarDirectoActual);
 
 // ---------- Revisión periódica de todos los directos guardados ----------
-// Cada REVISION_PERIODICA_MIN minutos (y poco después de abrir la página) se revisan los directos de TODAS las listas,
-// favoritos, super favorito y audio de fondo, no solo los que están en pantalla. Se reemplaza uno solo si ese
+// Cada REVISION_PERIODICA_MIN minutos (y poco después de abrir la página) se revisan los directos de la lista que
+// estás viendo (no mientras ves un solo canal: ver "Enfoque" abajo). El botón "📡 Revisar directos ahora" del panel
+// de estado revisa los de TODAS las listas, favoritos, super favorito y audio de fondo. Se reemplaza uno solo si ese
 // video ya no está en vivo y su canal transmite con otra URL (si el canal tiene dos directos a la vez, el que
-// sigue funcionando no se toca). También se puede lanzar a mano desde el panel de estado.
+// sigue funcionando no se toca).
 const REVISION_PERIODICA_MIN = 30;
 const PAUSA_ENTRE_DIRECTOS_MS = 1500;   // para no consultar a YouTube en ráfaga
 let revisionEnCurso = null;              // { hechos, total } mientras corre
@@ -256,13 +260,15 @@ function esDirectoConocido(linea) {
 }
 
 // Devuelve { revisados, reemplazados: [nombres] } o null si no hay servidor
-async function revisarDirectosGuardados(alAvanzar) {
+// soloVista: solo los de la lista que se está viendo (la revisión automática); si no, los de todas las listas
+async function revisarDirectosGuardados(alAvanzar, soloVista) {
   if (revisionEnCurso || servidorOk !== true) return null;
-  const lineas = lineasGuardadas().filter(esDirectoConocido);
+  const lineas = (soloVista ? fuente() : lineasGuardadas()).filter(esDirectoConocido);
   revisionEnCurso = { hechos: 0, total: lineas.length };
   const reemplazados = [];
   try {
     for (const linea of lineas) {
+      if (soloVista && enEnfoque()) { revisionPendiente = true; break; }   // pasaste a ver un solo canal: se sigue al volver
       if (alAvanzar) alAvanzar(revisionEnCurso);
       const p = parsear(linea), k = clave(linea);
       let info = null;
@@ -300,5 +306,34 @@ function reemplazarDirectoGuardado(linea, d) {
   guardar();
   pintarSelector();
 }
-setTimeout(() => revisarDirectosGuardados(), 2 * 60000);
-setInterval(() => revisarDirectosGuardados(), REVISION_PERIODICA_MIN * 60000);
+// ---------- Enfoque: viendo un solo canal ----------
+// Con un canal ampliado (o en pantalla completa) por más de ENFOQUE_MS, o con el ahorro activo, la página deja de
+// consultar a YouTube por los demás: no corre la revisión periódica de directos ni la de los cuadros caídos.
+// Al volver a la grilla se pone al día (una sola vez). Así el servidor no lee páginas de YouTube a cada rato
+// (demasiadas lecturas hacen que YouTube responda 429 y bloquee la lectura por horas).
+const ENFOQUE_MS = 2 * 60000;
+let enfoqueDesde = 0;
+function enEnfoque() {
+  return (typeof enAhorro !== 'undefined' && enAhorro) || (!!enfoqueDesde && Date.now() - enfoqueDesde >= ENFOQUE_MS);
+}
+let revisionPendiente = false;
+function vigilarEnfoque() {
+  const unSolo = !!contenedor.querySelector('.celda.max');
+  const estaba = enEnfoque();
+  if (unSolo) { if (!enfoqueDesde) enfoqueDesde = Date.now(); }
+  else enfoqueDesde = 0;
+  if (estaba && !enEnfoque()) {
+    // De vuelta en la grilla: lo que quedó pendiente
+    celdas.filter(c => c._directoPendiente).forEach(c => revisarDirecto(c));
+    if (revisionPendiente) { revisionPendiente = false; revisarDirectosGuardados(null, true); }
+  }
+}
+setInterval(vigilarEnfoque, 5000);
+
+// Revisión automática: solo los directos de la lista que estás viendo (el botón 📡 del panel de estado revisa todas)
+function revisionAutomatica() {
+  if (enEnfoque()) { revisionPendiente = true; return; }
+  revisarDirectosGuardados(null, true);
+}
+setTimeout(revisionAutomatica, 2 * 60000);
+setInterval(revisionAutomatica, REVISION_PERIODICA_MIN * 60000);

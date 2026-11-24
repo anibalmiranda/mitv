@@ -13,6 +13,7 @@ import shutil
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from http.server import ThreadingHTTPServer
 
@@ -94,9 +95,22 @@ class SaludDeLaLectura(unittest.TestCase):
 class FrenoDeYouTube(unittest.TestCase):
     """Si YouTube responde 429, se deja de consultarle un rato y el aviso se quita solo cuando vuelve a responder."""
 
+    def test_lecturas_espaciadas(self):
+        # Nunca dos lecturas de YouTube en ráfaga: entre una y otra pasa al menos ESPACIO_ENTRE_LECTURAS_S
+        original = servidor.ESPACIO_ENTRE_LECTURAS_S
+        servidor.ESPACIO_ENTRE_LECTURAS_S = 0.2
+        self.addCleanup(setattr, servidor, 'ESPACIO_ENTRE_LECTURAS_S', original)
+        servidor.esperar_turno()
+        t0 = time.time()
+        servidor.esperar_turno()
+        servidor.esperar_turno()
+        self.assertGreaterEqual(time.time() - t0, 0.38)
+
     def setUp(self):
         self.original = servidor.urllib.request.urlopen
         self.pedidos = 0
+        servidor.ESPACIO_ENTRE_LECTURAS_S, self._espacio = 0, servidor.ESPACIO_ENTRE_LECTURAS_S
+        self.addCleanup(lambda: setattr(servidor, 'ESPACIO_ENTRE_LECTURAS_S', self._espacio))
         servidor._freno.update(hasta=0.0, espera=servidor.FRENO_INICIAL_S)
         self.addCleanup(lambda: setattr(servidor.urllib.request, 'urlopen', self.original))
         self.addCleanup(lambda: servidor._freno.update(hasta=0.0, espera=servidor.FRENO_INICIAL_S))

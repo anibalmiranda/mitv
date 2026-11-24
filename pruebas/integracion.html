@@ -269,6 +269,33 @@ prueba('🔍 buscar parecido: resultados como miniaturas, en vivo y con el permi
     w.cerrarBuscar();
   }
 });
+prueba('enfoque: viendo un solo canal más de 2 min, los demás no consultan a YouTube; al volver se ponen al día', async () => {
+  w.eval('window._apiOrig = api; window._srvOrig = servidorOk; servidorOk = true; window._pedidos = []; ' +
+         'api = async (que, p) => { _pedidos.push([que, p]); return { vivo: true, directo: true }; }');
+  const otro = c()[1];
+  try {
+    w.alternarMax(c()[0]);
+    w.vigilarEnfoque();
+    igual(w.enEnfoque(), false, 'recién ampliado todavía no');
+    w.eval('enfoqueDesde = Date.now() - 3 * 60000');
+    igual(w.enEnfoque(), true, 'después de 2 min sí');
+    w.revisarDirecto(otro);
+    await espera(50);
+    igual(w._pedidos.length, 0, 'el cuadro de atrás no consulta');
+    cierto(otro._directoPendiente, 'queda pendiente');
+    w.eval('revisionAutomatica()');
+    cierto(w.eval('revisionPendiente'), 'la revisión automática también espera');
+    w.restaurarTodo();
+    w.vigilarEnfoque();
+    await espera(100);
+    igual(w.enEnfoque(), false);
+    cierto(w._pedidos.some(([q, p]) => q === 'video' && p.id === w.parsear(otro.dataset.linea).id), 'al volver revisa lo pendiente');
+    cierto(!w.eval('revisionPendiente'), 'y corre la revisión que esperaba');
+  } finally {
+    w.eval('api = _apiOrig; servidorOk = _srvOrig; enfoqueDesde = 0');
+    w.restaurarTodo();
+  }
+});
 prueba('🔍 buscar en un directo: arriba, todo lo que su canal transmite en vivo ahora; clic copia la URL', async () => {
   const canal = 'UC' + 'k'.repeat(22);
   const k = w.clave(c()[0].dataset.linea);

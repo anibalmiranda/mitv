@@ -99,10 +99,27 @@ def aviso_freno():
     return 'YouTube pidió bajar el ritmo (respondió 429); se vuelve a intentar a las ' + hora
 
 
+# Además, nunca dos lecturas seguidas: se deja un espacio entre una y otra (las ráfagas son lo que gatilla el 429).
+ESPACIO_ENTRE_LECTURAS_S = 1.0
+_ritmo = {'ultima': 0.0}
+_ritmo_lock = threading.Lock()
+
+
+def esperar_turno():
+    with _ritmo_lock:
+        espera = _ritmo['ultima'] + ESPACIO_ENTRE_LECTURAS_S - time.time()
+        if espera > 0:
+            time.sleep(espera)
+        _ritmo['ultima'] = time.time()
+
+
 def bajar(url):
     if frenado():
         raise urllib.error.HTTPError(url, 429, 'en pausa por el freno de YouTube', None, None)
-    req = urllib.request.Request(url, headers=CABECERAS_YT)
+    esperar_turno()
+    if frenado():   # mientras esperaba su turno, otra lectura pudo recibir un 429
+        raise urllib.error.HTTPError(url, 429, 'en pausa por el freno de YouTube', None, None)
+    req =urllib.request.Request(url, headers=CABECERAS_YT)
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             pagina = r.read().decode('utf-8', 'replace')
