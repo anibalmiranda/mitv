@@ -131,6 +131,10 @@ function urlEmbed(item, muteado, autoplay) {
       const v = item.video || (/^RD[\w-]{11}$/.test(item.id) ? item.id.slice(2) : '');
       if (v) return 'https://www.youtube.com/embed/' + encodeURIComponent(v) + '?' + p.toString();
     }
+    // Partiendo desde un video que se sabe que existe (reproductor.js): si el primero de la lista es privado o fue
+    // eliminado, el reproductor se queda pegado en "Este video no está disponible"
+    const v = item.video || inicioLista[item.id];
+    if (v) return 'https://www.youtube.com/embed/' + encodeURIComponent(v) + '?' + p.toString();
     return 'https://www.youtube.com/embed/videoseries?' + p.toString();
   }
   if (item.tipo === 'rudo') return 'https://rudo.video/live/' + encodeURIComponent(item.id);   // su página, sin parámetros
@@ -138,7 +142,8 @@ function urlEmbed(item, muteado, autoplay) {
   return null;
 }
 
-const TIPOS_SPOTIFY = ['playlist', 'album', 'track', 'artist', 'show', 'episode'];
+const inicioLista = {};   // id de playlist → primer video que se puede ver ('' si no se supo); solo en esta sesión
+const TIPOS_SPOTIFY =['playlist', 'album', 'track', 'artist', 'show', 'episode'];
 const NOMBRES_SPOTIFY = { playlist: 'Playlist', album: 'Álbum', track: 'Canción', artist: 'Artista', show: 'Podcast', episode: 'Episodio' };
 
 function urlIpcamlive(alias) { return 'https://g3.ipcamlive.com/player/player.php?alias=' + encodeURIComponent(alias) + '&autoplay=1'; }

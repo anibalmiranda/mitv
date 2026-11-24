@@ -45,6 +45,26 @@ function saltarNoDisponible(celda, ifr) {
   return true;
 }
 
+// Antes de cargar una playlist (no Mix, sin video de partida) se pregunta al servidor por su primer video que se
+// puede ver y se parte desde ahí. Devuelve true si el cuadro debe esperar la respuesta (luego se carga solo).
+function esperarInicioLista(celda, ifr) {
+  if (ifr.tagName !== 'IFRAME' || !/\/embed\/videoseries\?/.test(ifr.dataset.src || '')) return false;
+  const item = parsear(celda.dataset.linea);
+  if (!item || item.tipo !== 'lista' || item.id in inicioLista || servidorOk !== true) return false;
+  if (celda._pidiendoLista) return true;
+  celda._pidiendoLista = true;
+  api('lista', { id: item.id })
+    .then(r => (r && r.videos && r.videos[0]) || '', () => '')
+    .then(v => {
+      inicioLista[item.id] = v;
+      celda._pidiendoLista = false;
+      if (!ifr.isConnected || !ifr.dataset.src) return;   // se quitó o se durmió mientras tanto
+      if (v) ifr.dataset.src = ifr.dataset.src.replace('/embed/videoseries?', '/embed/' + encodeURIComponent(v) + '?');
+      cargarIframe(celda);
+    });
+  return true;
+}
+
 window.addEventListener('message', e => {
   let host = '';
   try { host = new URL(e.origin).hostname; } catch (err) { return; }

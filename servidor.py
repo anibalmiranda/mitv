@@ -57,6 +57,7 @@ CABECERAS_YT = {
 
 RX_CANAL = re.compile(r'^UC[\w-]{22}$')
 RX_VIDEO = re.compile(r'^[\w-]{11}$')
+RX_LISTA = re.compile(r'^[\w-]{10,64}$')
 # @handle, c/nombre o user/nombre (sin barras, espacios ni caracteres de consulta)
 RX_RUTA = re.compile(r'^(@|c/|user/)[^\s/?#&%"<>\\]{1,100}$', re.IGNORECASE)
 
@@ -307,6 +308,23 @@ def vivos_del_canal(canal):
         vigilar_pagina(pagina)
         return {'error': 'no se pudo leer la página del canal en YouTube'}
     return {'resultados': con_permisos([v for v in resultados_busqueda(datos) if v['vivo']][:MAX_VIVOS_CANAL])}
+
+
+RX_VIDEO_DE_LISTA = re.compile(r'"contentId":"([\w-]{11})","contentType":"LOCKUP_CONTENT_TYPE_VIDEO"'
+                               r'|"playlistVideoRenderer":\{"videoId":"([\w-]{11})"')
+
+
+def videos_de_lista(lista):
+    # Los videos que se pueden ver de una playlist, en orden (YouTube no muestra los privados ni los eliminados).
+    # La página sirve para partir la lista desde un video que existe: el reproductor incrustado se queda pegado en
+    # "Este video no está disponible" si el primero de la lista ya no está.
+    pagina = bajar('https://www.youtube.com/playlist?list=' + lista)
+    ids = list(dict.fromkeys(a or b for a, b in RX_VIDEO_DE_LISTA.findall(pagina)))
+    if not ids:
+        if _datos_iniciales(pagina) is None:
+            vigilar_pagina(pagina)
+        return {'error': 'no encontré videos que se puedan ver en esa lista', 'videos': []}
+    return {'videos': ids[:200]}
 
 
 def con_permisos(lista):
@@ -891,6 +909,9 @@ class Manejador(SimpleHTTPRequestHandler):
         if que == 'vivoscanal' and RX_CANAL.match(q.get('canal', '')):
             return recordado('vivoscanal:' + q['canal'], lambda r: 60 if r.get('error') else 120,
                              lambda: vivos_del_canal(q['canal']))
+        if que == 'lista' and RX_LISTA.match(q.get('id', '')):
+            return recordado('lista:' + q['id'], lambda r: 300 if r.get('error') else 6 * 3600,
+                             lambda: videos_de_lista(q['id']))
         if que == 'canalhls' and re.match(r'^https?://', q.get('url', ''), re.IGNORECASE):
             return recordado('hls:' + q['url'], 600, lambda: revisar_hls(q['url']))
         if que == 'directo' and RX_CANAL.match(q.get('canal', '')):

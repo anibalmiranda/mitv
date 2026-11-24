@@ -96,6 +96,10 @@ prueba('urlEmbed de un video', () => {
 prueba('urlEmbed de canal, playlist y Mix', () => {
   igual(new URL(urlEmbed({ tipo: 'canal', id: UC }, true, true)).searchParams.get('channel'), UC);
   igual(new URL(urlEmbed({ tipo: 'lista', id: 'PL1' }, true, true)).pathname, '/embed/videoseries');
+  inicioLista.PL2 = 'abcdefghijk';   // primer video que se puede ver: la lista parte desde ahí
+  const conInicio = new URL(urlEmbed({ tipo: 'lista', id: 'PL2' }, true, true));
+  igual(conInicio.pathname + '|' + conInicio.searchParams.get('list'), '/embed/abcdefghijk|PL2');
+  delete inicioLista.PL2;
   igual(new URL(urlEmbed({ tipo: 'lista', id: 'RD' + ID, mix: true }, true, true)).pathname, '/embed/' + ID);
 });
 prueba('nombres iniciales', () => {

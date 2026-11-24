@@ -231,6 +231,23 @@ class BusquedaEnYouTube(unittest.TestCase):
             servidor.bajar, servidor.info_video = original_bajar, original_info
             servidor._cache.clear()
 
+    def test_videos_de_lista(self):
+        pagina = ('{"lockupViewModel":{"contentId":"AAAAAAAAAAA","contentType":"LOCKUP_CONTENT_TYPE_VIDEO"}}'
+                  '{"lockupViewModel":{"contentId":"BBBBBBBBBBB","contentType":"LOCKUP_CONTENT_TYPE_VIDEO"}}'
+                  '{"lockupViewModel":{"contentId":"AAAAAAAAAAA","contentType":"LOCKUP_CONTENT_TYPE_VIDEO"}}'
+                  '{"playlistVideoRenderer":{"videoId":"CCCCCCCCCCC"}}')
+        pedidas = []
+        original = servidor.bajar
+        servidor.bajar = lambda url: pedidas.append(url) or pagina
+        try:
+            self.assertEqual(servidor.videos_de_lista('PLabcdefghij'), {'videos': ['AAAAAAAAAAA', 'BBBBBBBBBBB', 'CCCCCCCCCCC']})
+            self.assertEqual(pedidas, ['https://www.youtube.com/playlist?list=PLabcdefghij'])
+            servidor.bajar = lambda url: 'ytInitialData = {};'
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(servidor.videos_de_lista('PLabcdefghij')['videos'], [])
+        finally:
+            servidor.bajar = original
+
     def test_pagina_sin_resultados_legibles(self):
         original = servidor.bajar
         servidor.bajar = lambda url: '<html>página nueva sin datos</html>'

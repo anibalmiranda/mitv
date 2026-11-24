@@ -397,6 +397,7 @@ function cargarTanda() {
 function cargarIframe(celda) {
   const ifr = celda.querySelector(SEL_REPRODUCTOR);
   if (!ifr || !ifr.dataset.src || celda._externo) return;
+  if (esperarInicioLista(celda, ifr)) return;   // playlist: primero se averigua desde qué video partir (reproductor.js)
   const src = ifr.dataset.src;
   delete ifr.dataset.src;
   if (ifr.tagName === 'VIDEO') iniciarTv(celda, ifr, src);   // canal de TV

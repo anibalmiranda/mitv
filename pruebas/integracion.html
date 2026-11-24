@@ -544,6 +544,26 @@ prueba('playlist con un video privado o eliminado: se salta al siguiente en vez 
     cierto(!w.saltarNoDisponible(celda, ifr), 'un video suelto no se salta');
   } finally { celda.remove(); }
 });
+prueba('playlist: parte desde su primer video que se puede ver (lo averigua el servidor)', async () => {
+  const celda = d.createElement('div');
+  celda.className = 'celda';
+  celda.dataset.linea = 'https://music.youtube.com/playlist?list=PLpruebaInicio1&si=x';
+  const ifr = d.createElement('iframe');
+  ifr.dataset.src = 'https://www.youtube.com/embed/videoseries?mute=1&list=PLpruebaInicio1';
+  celda.appendChild(ifr);
+  d.body.appendChild(celda);
+  const apiReal = w.api, okReal = w.eval('servidorOk'), pedidas = [];
+  w.api = async (que, q) => { pedidas.push(que + ':' + q.id); return { videos: ['abcdefghijk', 'bbbbbbbbbbb'] }; };
+  w.eval('servidorOk = true');
+  try {
+    w.cargarIframe(celda);
+    cierto(!ifr.getAttribute('src'), 'espera la respuesta antes de cargar');
+    await espera(50);
+    igual(pedidas, ['lista:PLpruebaInicio1']);
+    igual(ifr.src, 'https://www.youtube.com/embed/abcdefghijk?mute=1&list=PLpruebaInicio1');
+    igual(w.eval('inicioLista').PLpruebaInicio1, 'abcdefghijk', 'queda recordado: las recargas también parten desde ahí');
+  } finally { w.api = apiReal; w.eval('servidorOk = ' + JSON.stringify(okReal)); delete w.eval('inicioLista').PLpruebaInicio1; celda.remove(); }
+});
 prueba('cuenta atrás: amarillo de 13 a 14 y rojo al llegar a cero', () => {
   tecla('t'); cierto(d.getElementById('cuentaAtras').classList.contains('visible'));
   w.eval('config.cuentaAtras.entrada = "08:00"; config.cuentaAtras.semana = 9');
