@@ -19,7 +19,8 @@ function calcularGrilla(n, W, H, gap) {
 }
 
 function ajustarGrilla() {
-  const n = celdas.length;
+  aplicarPestanas();   // con más de 20 cuadros, solo se ve la pestaña activa (pestanas.js)
+  const n = celdas.filter(enPestana).length;
   vacio.style.display = n ? 'none' : 'flex';
   if (!n) return;
   const gap = 6;
@@ -320,6 +321,7 @@ function render(reutilizar) {
   pintarFavsBoton();
   if (pendiente) conCausa('retomar el último video de esta lista', () => prepararRetomar(pendiente, ult));
   else ocultarAvisoRetomar();
+  ajustarGrilla();     // también las pestañas (pestanas.js)
   pintarAmpliado();   // los cuadros cambiaron: ¿quedó alguno ampliado?
   // ¿Se perdió el audio sin que nadie lo silenciara? (el que sonaba no está en la vista nueva, o se recargó todo)
   if (sonabaAntes && !sonabaAntes.isConnected && !celdas.some(c => c.dataset.mute === '0' || c.dataset.pendiente))
@@ -344,7 +346,11 @@ let colaCarga = [];
 let timerCarga = null;
 
 function celdasActivas() {
-  const videos = celdas.filter(c => c.querySelector(SEL_REPRODUCTOR) && !c._externo);
+  // Pestañas (pestanas.js): los de otras pestañas no cargan, salvo el que suena, el ampliado y sus vecinos
+  const vecinosMax = vecinosDelAmpliado();
+  const videos = celdas.filter(c => c.querySelector(SEL_REPRODUCTOR) && !c._externo &&
+    (enPestana(c) || c.dataset.mute === '0' || c.dataset.pendiente || c.classList.contains('max') ||
+     vecinosMax.has(c) || (fundido && fundido.nueva === c)));
   // Ahorro por inactividad: solo el que suena y el que se está viendo ampliado
   if (enAhorro) return new Set(videos.filter(c => c.dataset.mute === '0' || c.dataset.pendiente ||
                                                   c.classList.contains('max') || (fundido && fundido.nueva === c)));
@@ -486,7 +492,10 @@ function sincronizarUrls() {
   guardar();
   pintarSelector();
 }
-function reordenar() { celdas.forEach((c, i) => c.style.order = i); }
+function reordenar() {
+  celdas.forEach((c, i) => c.style.order = i);
+  if (hayPestanas()) { aplicarPestanas(); programarCarga(); }   // al reordenar, un cuadro puede cambiar de pestaña
+}
 
 // ---------- Arrastrar: el video arrastrado siempre queda justo antes del que sueltas encima ----------
 // Usa CSS order: no se recarga ningún video

@@ -603,6 +603,32 @@ prueba('Spotify: su reproductor oficial y audio exclusivo (al perder el audio se
     cambiarLista('A'); await espera(1500);
   }
 });
+prueba('pestañas: más de 20 canales se dividen; solo se ve y se carga la pestaña activa', async () => {
+  const L = Array.from({ length: 45 }, (_, i) => 'https://www.youtube.com/watch?v=pestana' + String(i).padStart(4, '0'));
+  w.eval('config.listas["P"] = ' + JSON.stringify(L) + '; config.actual = "P"; config.maxActivos = 0');
+  w.pintarSelector(); w.render(true); await espera(2500);
+  const visibles = () => c().filter(x => w.getComputedStyle(x).display !== 'none');
+  const cargado = x => /^https:/.test(x.querySelector('iframe').getAttribute('src') || '');
+  try {
+    const barra = d.getElementById('barraPestanas');
+    igual([...barra.querySelectorAll('button')].map(b => b.textContent), ['‹', '1', '2', '3', '›'], '3 pestañas de 20');
+    igual(visibles().length, 20, 'solo se ve la primera');
+    igual(c().slice(20).filter(cargado).length, 0, 'las otras pestañas no cargan nada');
+    barra.querySelector('button:last-child').click(); await espera(3000);
+    igual(visibles().map(x => c().indexOf(x)), Array.from({ length: 20 }, (_, i) => 20 + i), '› pasa a la segunda');
+    cierto(c().slice(20, 40).some(cargado), 'y empieza a cargar esa');
+    igual(c().slice(0, 20).filter(x => cargado(x) && x.dataset.mute !== '0').length, 0, 'la anterior se descarga');
+    d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }));
+    igual(visibles().length, 5, 'Av Pág: la tercera tiene 5');
+    w.alternarMax(c()[3]);
+    cierto(!c()[3].classList.contains('fuera-pestana'), 'al ampliar uno de otra pestaña, se va a la suya');
+    w.restaurarTodo();
+    igual(visibles().map(x => c().indexOf(x))[0], 0, 'de vuelta en la grilla queda en esa pestaña');
+  } finally {
+    cambiarLista('A'); await espera(1500);
+  }
+  igual(d.getElementById('barraPestanas').children.length, 0, 'una lista corta no tiene pestañas');
+});
 prueba('"▶ Ver en YouTube": ventana chica encima del cuadro y de su tamaño', () => {
   const abiertas = [];
   const original = w.open;

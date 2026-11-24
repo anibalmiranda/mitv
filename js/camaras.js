@@ -70,7 +70,8 @@ function modoCamara(celda) {
 }
 
 function camaraActiva(celda) {
-  return !config.modoAudio && !celda._pausadaFS && !(enAhorro && !celda.classList.contains('max'));
+  return !config.modoAudio && !celda._pausadaFS && !(enAhorro && !celda.classList.contains('max')) &&
+         (enPestana(celda) || celda.classList.contains('max'));   // las de otras pestañas no se conectan
 }
 
 // Conecta, cambia de modo o corta la cámara según si se está viendo

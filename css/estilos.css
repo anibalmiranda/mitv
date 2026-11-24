@@ -260,6 +260,21 @@ body.tira-abierta #btnTira svg { transform: rotate(180deg); }
 }
 /* Pantalla completa: tras 10 s con el mouse quieto se ocultan menú, flechas y pestaña de la tira (pantalla.js) */
 body.ui-oculta #barra-sup, body.ui-oculta .nav-btn, body.ui-oculta:not(.tira-abierta) #zonaTira { opacity: 0 !important; pointer-events: none !important; }
+/* Pestañas (pestanas.js): más de 20 cuadros → solo se ve la pestaña activa; ‹ 1 2 3 › arriba al centro */
+.celda.fuera-pestana:not(.max) { display: none !important; }
+#barraPestanas {
+  position: fixed; top: 0.6vh; left: 50%; transform: translateX(-50%); z-index: 20;
+  display: flex; gap: 4px; align-items: center; transition: opacity .4s;
+}
+#barraPestanas:empty, body.con-ampliado #barraPestanas, body.modo-audio #barraPestanas.oculta { display: none; }
+#barraPestanas button {
+  background: rgba(20,20,24,.85); color: var(--texto); border: 1px solid var(--borde); border-radius: 6px;
+  min-width: 30px; height: 28px; padding: 0 8px; font-size: 13px; cursor: pointer;
+}
+#barraPestanas button:hover { border-color: #fff; }
+#barraPestanas button.flecha { font-size: 18px; line-height: 1; }
+#barraPestanas button.activa { background: var(--acento); border-color: var(--acento); color: #fff; font-weight: 600; }
+body.ui-oculta #barraPestanas { opacity: 0 !important; pointer-events: none !important; }
 #atrapaMouse { position: fixed; inset: 0; z-index: 40; display: none; cursor: none; }
 body.ui-oculta #atrapaMouse { display: block; }
 #barra-sup button {

@@ -12,6 +12,7 @@ function alternarMax(celda) {
     c.querySelector('.maximizar').textContent = '⤢';
   });
   if (!yaMax) {
+    mostrarPestanaDe(celda);   // si estaba en otra pestaña, se pasa a esa (pestanas.js)
     celda.classList.add('max');
     celda.querySelector('.maximizar').textContent = '⤡';
     cargarYa(celda);

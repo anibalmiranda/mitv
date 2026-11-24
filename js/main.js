@@ -40,6 +40,8 @@ document.addEventListener('keydown', e => {
       else mostrarMensaje('El carrusel es para un canal ampliado (doble clic) o pantalla completa (F)');
     }
     if (/^[1-9]$/.test(k)) { e.preventDefault(); irANumero(Number(k)); }
+    if (e.key === 'PageDown' && hayPestanas()) { e.preventDefault(); cambiarPestana(1); }   // pestañas (pestanas.js)
+    if (e.key === 'PageUp' && hayPestanas()) { e.preventDefault(); cambiarPestana(-1); }
   }
   // Las flechas navegan en pantalla completa o con un video ampliado (no mientras escribes ni con una ventana abierta)
   if ((document.fullscreenElement || document.body.classList.contains('con-ampliado')) && !panelAbierto && !buscarAbierto && !enCampo) {

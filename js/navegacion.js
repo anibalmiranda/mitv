@@ -21,6 +21,7 @@ function irA(celda) {
   const lista = validas();
   const pos = lista.indexOf(celda);
   if (pos === -1) return;
+  mostrarPestanaDe(celda);
   if (!config.modoAudio && !celda.classList.contains('max')) cambiarAmpliado(celda);
   if (celda.dataset.mute === '1') conCausa(causaAudio || 'navegación (flechas, tira o número)', () => alternarAudio(celda));
   const tit = celda.querySelector('.titulo');
@@ -46,6 +47,7 @@ function irANumero(n) {
   if (document.fullscreenElement || contenedor.querySelector('.celda.max') || config.modoAudio) irA(c);
   else if (c.dataset.tipo === 'camara') alternarMax(c);
   else {
+    mostrarPestanaDe(c);
     if (c.dataset.mute === '1') conCausa('tecla de número', () => alternarAudio(c));
     const tit = c.querySelector('.titulo');
     mostrarMensaje(n + ' / ' + lista.length + (tit ? ' · ' + tit.textContent : ''));
