@@ -26,7 +26,6 @@ El repositorio `anibalmiranda/mitv` es público: GitHub Pages lo puede publicar 
 ## Otras fuentes en vivo
 
 - **Twitch y Kick:** tienen reproductores incrustables oficiales.
-- (Descartado: ipcamlive.)
 
 ## Recomendaciones pendientes
 
