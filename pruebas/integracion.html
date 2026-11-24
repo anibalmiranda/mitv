@@ -269,6 +269,37 @@ prueba('🔍 buscar parecido: resultados como miniaturas, en vivo y con el permi
     w.cerrarBuscar();
   }
 });
+prueba('🔍 buscar en un directo: arriba, todo lo que su canal transmite en vivo ahora; clic copia la URL', async () => {
+  const canal = 'UC' + 'k'.repeat(22);
+  const k = w.clave(c()[0].dataset.linea);
+  const antes = w.eval('JSON.stringify(config.nombres[' + JSON.stringify(k) + '] || null)');
+  w.eval('config.nombres[' + JSON.stringify(k) + '] = { titulo: "Cámara 1", autor: "Ledrium", vivo: true, canal: "' + canal + '" }');
+  const V1 = { id: 'ddddddddddd', titulo: 'Cámara 1', canal: '', vivo: true, detalle: '8 lo están viendo', incrustable: true, miniatura: 'about:blank' };
+  const V2 = { id: 'eeeeeeeeeee', titulo: 'Cámara 2', canal: '', vivo: true, detalle: '7 lo están viendo', incrustable: true, miniatura: 'about:blank' };
+  w.eval('window._apiOrig = api; window._pedidos = []; api = async (que, p) => { _pedidos.push([que, p]); ' +
+         'return que === "vivoscanal" ? { resultados: ' + JSON.stringify([V1, V2]) + ' } : { resultados: ' + JSON.stringify([V1]) + ' }; }');
+  try {
+    w.abrirBuscar(c()[0]); await espera(150);
+    cierto(w._pedidos.some(([q, p]) => q === 'vivoscanal' && p.canal === canal), 'pregunta por los directos de su canal');
+    cierto(!d.getElementById('buscarCanalBloque').hidden, 'se ve la sección del canal');
+    cierto(/Ledrium/.test(d.getElementById('buscarCanalTitulo').textContent));
+    const arriba = [...d.querySelectorAll('#buscarCanal .resultado')];
+    igual(arriba.length, 2, 'todos sus directos');
+    cierto(/Ledrium/.test(arriba[0].querySelector('.a').textContent), 'con el nombre del canal');
+    igual(d.querySelectorAll('#buscarResultados .resultado').length, 1, 'y abajo la búsqueda (aunque se repita)');
+    arriba[1].click(); await espera(50);
+    igual(d.getElementById('buscarNuevaUrl').value, 'https://www.youtube.com/watch?v=eeeeeeeeeee', 'clic: su URL queda lista');
+    // Un video que no es directo no muestra la sección
+    w.cerrarBuscar();
+    w.eval('config.nombres[' + JSON.stringify(k) + '] = { titulo: "Video", autor: "X", vivo: false }');
+    w.abrirBuscar(c()[0]); await espera(100);
+    cierto(d.getElementById('buscarCanalBloque').hidden, 'sin directo no hay sección del canal');
+  } finally {
+    w.eval('api = _apiOrig');
+    w.eval('config.nombres[' + JSON.stringify(k) + '] = ' + antes + '; if (!config.nombres[' + JSON.stringify(k) + ']) delete config.nombres[' + JSON.stringify(k) + ']');
+    w.cerrarBuscar();
+  }
+});
 prueba('teclas 1 a 9 van a ese video', () => {
   tecla('3'); igual(conAudio(), 2);
   tecla('9'); cierto(/No hay un video 9/.test(d.getElementById('indicador').textContent));
@@ -674,6 +705,24 @@ prueba('al guardar una lista se quitan las URLs repetidas (queda la primera)', a
   cierto(/2 URLs repetidas/.test(d.getElementById('indicador').textContent), d.getElementById('indicador').textContent);
   await espera(2000);
   cambiarLista('A');
+});
+prueba('⚙ 🧹 Quitar inactivos: quita los caídos, deja los bloqueados por su dueño y los que no se pudieron revisar', async () => {
+  w.eval('window._apiOrig = api; window._srvOrig = servidorOk; servidorOk = true; api = async (que, p) => {' +
+         ' if (p.id === "gonegonegon") throw new Error("el video no existe");' +
+         ' if (p.id === "slowslowslo") throw new Error("YouTube respondió 429");' +
+         ' return { incrustable: p.id !== "blockblockb" }; }');
+  try {
+    w.abrirPanel();
+    d.getElementById('urls').value = ['# mis videos', 'https://youtu.be/okokokokoko', 'https://youtu.be/gonegonegon',
+      'https://youtu.be/blockblockb', 'esto perdió el id', 'https://youtu.be/slowslowslo'].join('\n');
+    d.getElementById('btnQuitarInactivos').click();
+    await espera(300);
+    igual(d.getElementById('urls').value.split('\n'),
+      ['# mis videos', 'https://youtu.be/okokokokoko', 'https://youtu.be/blockblockb', 'https://youtu.be/slowslowslo']);
+    const av = d.getElementById('aviso').textContent;
+    cierto(/2 inactivo/.test(av) && /1 bloqueado/.test(av) && /no se pudieron revisar/.test(av), av);
+    w.cerrarPanel();
+  } finally { w.eval('api = _apiOrig; servidorOk = _srvOrig'); }
 });
 prueba('mover y copiar un cuadro a otra lista (sin duplicar)', async () => {
   w.eval('config.listas["M1"] = ["https://www.youtube.com/watch?v=mmmmmmmmmm1", "https://www.youtube.com/watch?v=mmmmmmmmmm2"]; ' +

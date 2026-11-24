@@ -403,9 +403,11 @@ button.btn { border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; 
 #buscarTexto:focus, #buscarNuevaUrl:focus { outline: 1px solid var(--acento); }
 #avisoBuscar { font-size: 12px; color: #ffb4b4; min-height: 16px; }
 /* Resultados de la búsqueda (hasta 6 miniaturas, buscar.js) */
-#buscarResultados { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-#buscarResultados:empty { display: none; }
-#buscarResultados .buscando { grid-column: 1 / -1; font-size: 13px; color: var(--suave); padding: 10px 2px; }
+.resultados { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.resultados:empty { display: none; }
+.buscar-seccion { font-size: 13px; font-weight: 600; margin: 4px 0 6px; color: var(--texto); }
+#buscarCanalBloque { margin-bottom: 4px; }
+.resultados .buscando { grid-column: 1 / -1; font-size: 13px; color: var(--suave); padding: 10px 2px; }
 .resultado {
   display: flex; flex-direction: column; text-align: left; padding: 0; cursor: pointer; overflow: hidden;
   background: #111113; border: 2px solid transparent; border-radius: 8px; color: var(--texto); font: inherit;
@@ -423,7 +425,7 @@ button.btn { border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; 
 .resultado .a { font-size: 11px; color: var(--suave); padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .resultado .permiso { font-size: 11px; padding: 4px 8px 7px; color: #9be7a6; }
 .resultado.bloqueado .permiso { color: #ffb4b4; }
-@media (max-width: 560px) { #buscarResultados { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .resultados { grid-template-columns: repeat(2, 1fr); } }
 #avisoBuscar.ok { color: #9be7a6; }
 
 /* Cámaras IP (stream MJPEG): sin audio, sin buscar parecido; la capa de clic cubre todo (no hay controles de YouTube) */

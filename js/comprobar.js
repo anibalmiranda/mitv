@@ -13,7 +13,12 @@
 const RX_DESCARTE = /^# ✘ \d{4}-\d{2}-\d{2} .* · (\S+)\s*$/;   // la URL es lo último de la línea
 let comprobacion = null;   // { malas: [{ linea, motivo }] } tras "Comprobar lista"
 
-// Devuelve { ok, motivo, nueva } (nueva: la línea que la reemplaza si se arregló sola)
+// Errores que no dicen nada del video (YouTube pidió bajar el ritmo, sin internet...): no se sabe si funciona
+const RX_SIN_SABER = /^(YouTube respondió|YouTube tardó|sin conexión)/;
+const sinSaber = e => ({ ok: false, sinSaber: true, motivo: 'no se pudo revisar (' + e.message + ')' });
+
+// Devuelve { ok, motivo, nueva, bloqueado, sinSaber } (nueva: la línea que la reemplaza si se arregló sola;
+// bloqueado: el dueño solo deja verlo en YouTube; sinSaber: no se pudo revisar ahora)
 async function comprobarLinea(linea) {
   const p = parsear(linea);
   if (!p) return { ok: true };
@@ -48,8 +53,12 @@ async function comprobarLinea(linea) {
   // Video de YouTube
   let info;
   try { info = await api('video', { id: p.id }); }
-  catch (e) { if (e.message === 'sin servidor') throw e; return { ok: false, motivo: 'el video no existe o es privado' }; }
-  if (info.incrustable === false) return { ok: false, motivo: 'el dueño solo permite verlo en YouTube' };
+  catch (e) {
+    if (e.message === 'sin servidor') throw e;
+    if (RX_SIN_SABER.test(e.message)) return sinSaber(e);
+    return { ok: false, motivo: 'el video no existe o es privado' };
+  }
+  if (info.incrustable === false) return { ok: false, bloqueado: true, motivo: 'el dueño solo permite verlo en YouTube' };
   if (info.directo && !info.vivo) {
     const canal = info.canal || (config.nombres[clave(linea)] || {}).canal;
     const d = canal ? await api('directo', { canal }) : { vivo: false };
@@ -67,7 +76,7 @@ async function comprobarVarias(lineas, alAvanzar) {
     while (i < lineas.length) {
       const n = i++;
       try { res[n] = await comprobarLinea(lineas[n]); }
-      catch (e) { if (e.message === 'sin servidor') throw e; res[n] = { ok: false, motivo: e.message }; }
+      catch (e) { if (e.message === 'sin servidor') throw e; res[n] = RX_SIN_SABER.test(e.message) ? sinSaber(e) : { ok: false, motivo: e.message }; }
       alAvanzar(++hechos, lineas.length);
     }
   };
@@ -96,7 +105,7 @@ async function comprobarLista() {
   let arreglados = 0;
   res.forEach((r, n) => { if (r.ok && r.nueva) { reemplazarEnConfig(lineas[n], r.nueva); arreglados++; } });
   if (arreglados) { guardar(); render(true); pintarSelector(); }
-  const malas = res.map((r, n) => ({ linea: lineas[n], motivo: r.motivo, ok: r.ok })).filter(x => !x.ok);
+  const malas = res.map((r, n) => ({ linea: lineas[n], motivo: r.motivo, ok: r.ok || r.sinSaber })).filter(x => !x.ok);
   comprobacion = { malas };
   info.textContent = '🧹 ' + lineas.length + ' revisada(s) · ' + (lineas.length - malas.length) + ' funcionan' +
     (arreglados ? ' (' + arreglados + ' arreglada(s) sola(s))' : '') + ' · ' + malas.length + ' no funcionan' +
@@ -106,6 +115,39 @@ async function comprobarLista() {
   $('btnComprobar').disabled = false;
   armarEstado();
 }
+
+// ⚙ "🧹 Quitar inactivos": revisa las líneas que estás editando y borra del cuadro de texto las que ya no funcionan
+// (video eliminado o privado, directo terminado sin otro en el canal, URL no reconocida, cámara o canal de TV caído).
+// No toca las bloqueadas por su dueño (se pueden ver en YouTube) ni las que no se pudieron revisar ahora; los
+// directos que siguen con otra URL se cambian. Se aplica al apretar Guardar (Cancelar lo deshace).
+async function quitarInactivos() {
+  const b = $('btnQuitarInactivos'), av = $('aviso');
+  if (servidorOk !== true) { av.textContent = 'Quitar inactivos necesita el servidor: abre la página con iniciar.bat.'; return; }
+  const todas = txt.value.split(/\r?\n/);
+  const revisar = todas.map((l, i) => [l.trim(), i]).filter(([l]) => parsear(l));   // sin comentarios ni vacías
+  if (!revisar.length) { av.textContent = 'No hay líneas para revisar.'; return; }
+  b.disabled = true;
+  let res;
+  try { res = await comprobarVarias(revisar.map(x => x[0]), (h, t) => { av.textContent = '🧹 Revisando… ' + h + ' / ' + t; }); }
+  catch (e) { av.textContent = 'No se pudo revisar: ' + textoError(e) + '.'; b.disabled = false; return; }
+  b.disabled = false;
+  const quitar = new Set(), nuevas = new Map();
+  let bloqueados = 0, dudosos = 0;
+  res.forEach((r, n) => {
+    const i = revisar[n][1];
+    if (r.ok) { if (r.nueva) nuevas.set(i, r.nueva); }
+    else if (r.bloqueado) bloqueados++;
+    else if (r.sinSaber) dudosos++;
+    else quitar.add(i);
+  });
+  txt.value = todas.map((l, i) => nuevas.has(i) ? nuevas.get(i) : l).filter((l, i) => !quitar.has(i)).join('\n');
+  av.textContent = (quitar.size ? '🧹 Se quitaron ' + quitar.size + ' inactivo(s)' : '🧹 No hay inactivos') +
+    (nuevas.size ? ' · ' + nuevas.size + ' directo(s) cambiado(s) a su URL nueva' : '') +
+    (bloqueados ? ' · se dejan ' + bloqueados + ' bloqueado(s) por su dueño' : '') +
+    (dudosos ? ' · ' + dudosos + ' no se pudieron revisar ahora (se dejan)' : '') +
+    ((quitar.size || nuevas.size) ? '. Aprieta Guardar para aplicarlo (Cancelar lo deshace).' : '.');
+}
+$('btnQuitarInactivos').addEventListener('click', quitarInactivos);
 
 // Comenta las líneas que no funcionan (no se pierden: quedan con su motivo para "Revisar descartados")
 function quitarMalas() {

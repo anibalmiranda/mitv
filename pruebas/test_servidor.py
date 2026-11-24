@@ -199,6 +199,24 @@ class BusquedaEnYouTube(unittest.TestCase):
             servidor.bajar, servidor.info_video = original_bajar, original_info
             servidor._cache.clear()
 
+    def test_vivos_del_canal(self):
+        pedidas = []
+        def bajar(url):
+            pedidas.append(url)
+            return self.pagina()
+        original_bajar, original_info = servidor.bajar, servidor.info_video
+        servidor.bajar = bajar
+        servidor.info_video = lambda vid: {'incrustable': True}
+        servidor._cache.clear()
+        try:
+            r = servidor.vivos_del_canal('UC' + 'x' * 22)['resultados']
+            self.assertEqual(pedidas, ['https://www.youtube.com/channel/UC' + 'x' * 22 + '/streams'])
+            self.assertEqual([v['id'] for v in r], ['h5efji0_wtQ'], 'solo los que están en vivo ahora')
+            self.assertIs(r[0]['incrustable'], True)
+        finally:
+            servidor.bajar, servidor.info_video = original_bajar, original_info
+            servidor._cache.clear()
+
     def test_pagina_sin_resultados_legibles(self):
         original = servidor.bajar
         servidor.bajar = lambda url: '<html>página nueva sin datos</html>'

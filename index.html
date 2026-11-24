@@ -8,7 +8,7 @@
 <!-- Abre de antemano las conexiones con YouTube y sus miniaturas (la grilla carga más rápido) -->
 <link rel="preconnect" href="https://www.youtube.com">
 <link rel="preconnect" href="https://i.ytimg.com">
-<link rel="stylesheet" href="css/estilos.css?v=20261124b">
+<link rel="stylesheet" href="css/estilos.css?v=20261124c">
 </head>
 <body>
 
@@ -207,6 +207,7 @@
         <input type="number" id="numFadeImg" min="0" max="10" step="0.5" value="1.5"
           style="width:56px;background:#111113;color:var(--texto);border:1px solid var(--borde);border-radius:4px;padding:3px 6px"> s</label>
       <span class="espacio"></span>
+      <button class="btn secundario" id="btnQuitarInactivos" title="Revisa las líneas de esta lista y quita las que ya no funcionan (video eliminado, directo terminado, URL que perdió su ID…). No quita las bloqueadas por su dueño. Se aplica al Guardar">🧹 Quitar inactivos</button>
       <button class="btn secundario" id="btnCancelar">Cancelar</button>
       <button class="btn primario" id="btnGuardar">Guardar</button>
     </div>
@@ -275,8 +276,13 @@
       <label title="Muestra solo transmisiones en vivo"><input type="checkbox" id="buscarSoloVivo"> Solo en vivo</label>
       <button class="btn primario" id="btnBuscarYT" title="Busca en YouTube y muestra aquí los primeros 6 resultados">🔍 Buscar</button>
     </div>
-    <div id="buscarResultados"></div>
-    <p class="nota">Elige un resultado (doble clic lo reemplaza al tiro) o pega una URL, y decide si reemplaza a este video o se agrega a la lista. ¿No está? <a href="#" id="buscarAbrirYT">ver más en YouTube ↗</a></p>
+    <div id="buscarCanalBloque" hidden>
+      <h3 class="buscar-seccion" id="buscarCanalTitulo"></h3>
+      <div id="buscarCanal" class="resultados"></div>
+      <h3 class="buscar-seccion">🔍 Resultados de la búsqueda</h3>
+    </div>
+    <div id="buscarResultados" class="resultados"></div>
+    <p class="nota">Clic en un resultado: copia su URL (queda abajo y en el portapapeles); doble clic lo reemplaza al tiro. También puedes pegar una URL, y decide si reemplaza a este video o se agrega a la lista. ¿No está? <a href="#" id="buscarAbrirYT">ver más en YouTube ↗</a></p>
     <div class="fila">
       <input id="buscarNuevaUrl" type="text" placeholder="https://www.youtube.com/watch?v=...">
       <button class="btn secundario" id="btnBuscarDirecto" title="Pregunta a YouTube qué está transmitiendo en vivo ahora el canal de este video y pone esa URL aquí">📡 Directo actual</button>
@@ -290,36 +296,36 @@
 
 <!-- hls.js (Apache 2.0, js/vendor/LICENSE-hls.js.txt): reproduce canales de TV .m3u8 -->
 <script src="js/vendor/hls.min.js?v=1.6.13"></script>
-<script src="js/config.js?v=20261124b"></script>
-<script src="js/urls.js?v=20261124b"></script>
-<script src="js/grilla.js?v=20261124b"></script>
-<script src="js/favoritos.js?v=20261124b"></script>
-<script src="js/reproductor.js?v=20261124b"></script>
-<script src="js/audio.js?v=20261124b"></script>
-<script src="js/visualizador.js?v=20261124b"></script>
-<script src="js/pantalla.js?v=20261124b"></script>
-<script src="js/navegacion.js?v=20261124b"></script>
-<script src="js/carrusel.js?v=20261124b"></script>
-<script src="js/ampliar.js?v=20261124b"></script>
-<script src="js/pausa.js?v=20261124b"></script>
-<script src="js/panel.js?v=20261124b"></script>
-<script src="js/respaldo.js?v=20261124b"></script>
-<script src="js/camaras.js?v=20261124b"></script>
-<script src="js/buscar.js?v=20261124b"></script>
-<script src="js/externos.js?v=20261124b"></script>
-<script src="js/directos.js?v=20261124b"></script>
-<script src="js/sincronizar.js?v=20261124b"></script>
-<script src="js/teclas.js?v=20261124b"></script>
-<script src="js/superfav.js?v=20261124b"></script>
-<script src="js/cuentaatras.js?v=20261124b"></script>
-<script src="js/fondo.js?v=20261124b"></script>
-<script src="js/estado.js?v=20261124b"></script>
-<script src="js/tv.js?v=20261124b"></script>
-<script src="js/rudo.js?v=20261124b"></script>
-<script src="js/comprobar.js?v=20261124b"></script>
-<script src="js/mover.js?v=20261124b"></script>
-<script src="js/compartir.js?v=20261124b"></script>
-<script src="js/programas.js?v=20261124b"></script>
-<script src="js/main.js?v=20261124b"></script>
+<script src="js/config.js?v=20261124c"></script>
+<script src="js/urls.js?v=20261124c"></script>
+<script src="js/grilla.js?v=20261124c"></script>
+<script src="js/favoritos.js?v=20261124c"></script>
+<script src="js/reproductor.js?v=20261124c"></script>
+<script src="js/audio.js?v=20261124c"></script>
+<script src="js/visualizador.js?v=20261124c"></script>
+<script src="js/pantalla.js?v=20261124c"></script>
+<script src="js/navegacion.js?v=20261124c"></script>
+<script src="js/carrusel.js?v=20261124c"></script>
+<script src="js/ampliar.js?v=20261124c"></script>
+<script src="js/pausa.js?v=20261124c"></script>
+<script src="js/panel.js?v=20261124c"></script>
+<script src="js/respaldo.js?v=20261124c"></script>
+<script src="js/camaras.js?v=20261124c"></script>
+<script src="js/buscar.js?v=20261124c"></script>
+<script src="js/externos.js?v=20261124c"></script>
+<script src="js/directos.js?v=20261124c"></script>
+<script src="js/sincronizar.js?v=20261124c"></script>
+<script src="js/teclas.js?v=20261124c"></script>
+<script src="js/superfav.js?v=20261124c"></script>
+<script src="js/cuentaatras.js?v=20261124c"></script>
+<script src="js/fondo.js?v=20261124c"></script>
+<script src="js/estado.js?v=20261124c"></script>
+<script src="js/tv.js?v=20261124c"></script>
+<script src="js/rudo.js?v=20261124c"></script>
+<script src="js/comprobar.js?v=20261124c"></script>
+<script src="js/mover.js?v=20261124c"></script>
+<script src="js/compartir.js?v=20261124c"></script>
+<script src="js/programas.js?v=20261124c"></script>
+<script src="js/main.js?v=20261124c"></script>
 </body>
 </html>

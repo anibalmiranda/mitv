@@ -196,6 +196,7 @@ def info_video_recordada(vid):
 # permite verlo fuera de YouTube. YouTube entrega los resultados como "lockupViewModel" (formato nuevo) o como
 # "videoRenderer" (formato anterior): se entienden los dos.
 MAX_RESULTADOS = 6
+MAX_VIVOS_CANAL = 12
 FILTRO_EN_VIVO = 'EgJAAQ%253D%253D'   # el filtro "En vivo" de YouTube
 
 
@@ -278,7 +279,20 @@ def buscar_youtube(texto, solo_vivo):
         vigilar_pagina(pagina)
         return {'error': 'no se pudo leer la página de resultados de YouTube'}
     lista = [v for v in resultados_busqueda(datos) if v['vivo'] or not solo_vivo][:MAX_RESULTADOS]
+    return {'resultados': con_permisos(lista)}
 
+
+def vivos_del_canal(canal):
+    # Lo que el canal transmite en vivo ahora (su pestaña "En vivo"; un canal puede tener varios directos a la vez)
+    pagina = bajar('https://www.youtube.com/channel/' + canal + '/streams')
+    datos = _datos_iniciales(pagina)
+    if datos is None:
+        vigilar_pagina(pagina)
+        return {'error': 'no se pudo leer la página del canal en YouTube'}
+    return {'resultados': con_permisos([v for v in resultados_busqueda(datos) if v['vivo']][:MAX_VIVOS_CANAL])}
+
+
+def con_permisos(lista):
     # ¿El dueño permite verlo fuera de YouTube? (de a 3 a la vez; si YouTube no responde, queda "sin saber")
     def revisar(v):
         try:
@@ -296,7 +310,7 @@ def buscar_youtube(texto, solo_vivo):
         hilos.append(h)
     for h in hilos:
         h.join(30)
-    return {'resultados': lista}
+    return lista
 
 
 def info_directo(canal):
@@ -857,6 +871,9 @@ class Manejador(SimpleHTTPRequestHandler):
             vivo = q.get('vivo') == '1'
             return recordado('buscar:%d:%s' % (vivo, texto.lower()), lambda r: 60 if r.get('error') else 600,
                              lambda: buscar_youtube(texto, vivo))
+        if que == 'vivoscanal' and RX_CANAL.match(q.get('canal', '')):
+            return recordado('vivoscanal:' + q['canal'], lambda r: 60 if r.get('error') else 120,
+                             lambda: vivos_del_canal(q['canal']))
         if que == 'canalhls' and re.match(r'^https?://', q.get('url', ''), re.IGNORECASE):
             return recordado('hls:' + q['url'], 600, lambda: revisar_hls(q['url']))
         if que == 'directo' and RX_CANAL.match(q.get('canal', '')):

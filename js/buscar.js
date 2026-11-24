@@ -113,11 +113,41 @@ function abrirBuscar(celda) {
   fondoBuscar.classList.add('abierto');
   setTimeout(() => { $('buscarTexto').focus(); $('buscarTexto').select(); }, 50);
   if (d.consulta) buscarAqui();   // busca solo al abrir, con lo que tenía registrado
+  buscarVivosDelCanal(celda, d);
 }
 function cerrarBuscar() {
   fondoBuscar.classList.remove('abierto');
   celdaBuscar = null;
   busquedaN++;   // si quedó una búsqueda en curso, su respuesta ya no se muestra
+  canalN++;
+}
+
+// ---------- Lo que su canal transmite en vivo ahora ----------
+// Si es un directo (o un canal en vivo), arriba se muestran todos los directos de ese mismo canal (un canal puede
+// transmitir varias cámaras a la vez), aunque también salgan en la búsqueda de abajo.
+let canalN = 0;
+async function buscarVivosDelCanal(celda, d) {
+  const n = ++canalN;
+  const bloque = $('buscarCanalBloque'), cont = $('buscarCanal');
+  bloque.hidden = true;
+  cont.innerHTML = '';
+  if (!d.vivo) return;
+  const p = parsear(celda.dataset.linea);
+  let canal = p && p.tipo === 'canal' ? p.id : (config.nombres[clave(celda.dataset.linea)] || {}).canal;
+  const vigente = () => n === canalN && celdaBuscar === celda;
+  try {
+    if (!canal && p && p.tipo === 'video') canal = (await api('video', { id: p.id })).canal;
+    if (!vigente() || !canal) return;
+    $('buscarCanalTitulo').textContent = '📡 En vivo ahora en ' + (d.autor || 'su canal');
+    bloque.hidden = false;
+    avisoEnCaja('⏳ Revisando qué transmite el canal y los permisos…', cont);
+    const r = await api('vivoscanal', { canal });
+    if (!vigente()) return;
+    pintarResultados(r.resultados || [], true, cont, { autor: d.autor, vacio: 'El canal no está transmitiendo en vivo ahora.' });
+  } catch (e) {
+    if (!vigente() || bloque.hidden) return;
+    avisoEnCaja('No se pudo revisar el canal: ' + textoError(e) + '.', cont);
+  }
 }
 // "ver más en YouTube ↗": los resultados completos en otra pestaña (copias la URL y la pegas abajo)
 function buscarEnYouTube() {
@@ -135,8 +165,8 @@ function buscarEnYouTube() {
 // Muestra los primeros 6 resultados como miniaturas, con EN VIVO y si el dueño permite verlo fuera de YouTube.
 // Un clic lo elige (queda su URL abajo), doble clic lo reemplaza al tiro. Los bloqueados no se pueden elegir.
 let busquedaN = 0;
-function avisoEnCaja(texto) {
-  const cont = $('buscarResultados');
+function avisoEnCaja(texto, cont) {
+  cont = cont || $('buscarResultados');
   cont.innerHTML = '';
   const d = document.createElement('div');
   d.className = 'buscando';
@@ -163,9 +193,11 @@ async function buscarAqui() {
   if (n !== busquedaN || !celdaBuscar) return;
   pintarResultados(d.resultados || [], vivo);
 }
-function pintarResultados(lista, vivo) {
-  const cont = $('buscarResultados');
-  if (!lista.length) { avisoEnCaja('No encontré nada' + (vivo ? ' transmitiendo en vivo' : '') + '. Prueba con otras palabras.'); return; }
+// cont: dónde (la búsqueda o los directos del canal); op.autor: el canal si el resultado no lo trae; op.vacio: aviso sin resultados
+function pintarResultados(lista, vivo, cont, op) {
+  cont = cont || $('buscarResultados');
+  op = op || {};
+  if (!lista.length) { avisoEnCaja(op.vacio || ('No encontré nada' + (vivo ? ' transmitiendo en vivo' : '') + '. Prueba con otras palabras.'), cont); return; }
   cont.innerHTML = '';
   const kActual = clave(celdaBuscar.dataset.linea);
   lista.forEach(v => {
@@ -187,7 +219,7 @@ function pintarResultados(lista, vivo) {
     t.textContent = v.titulo;
     const a = document.createElement('div');
     a.className = 'a';
-    a.textContent = [v.canal, v.detalle].filter(Boolean).join(' · ');
+    a.textContent = [v.canal || op.autor, v.detalle].filter(Boolean).join(' · ');
     const perm = document.createElement('div');
     perm.className = 'permiso';
     perm.textContent = v.incrustable === true ? '✅ Se puede ver aquí' : v.incrustable === false ? '🔒 Solo en YouTube (bloqueado por el dueño)'
@@ -201,11 +233,12 @@ function pintarResultados(lista, vivo) {
         av.textContent = 'El dueño de ese video no permite verlo fuera de YouTube: elige otro.';
         return false;
       }
-      cont.querySelectorAll('.resultado.elegido').forEach(x => x.classList.remove('elegido'));
+      $('panelBuscar').querySelectorAll('.resultado.elegido').forEach(x => x.classList.remove('elegido'));
       it.classList.add('elegido');
       $('buscarNuevaUrl').value = url;
       av.classList.add('ok');
       av.textContent = 'Elegido: ' + v.titulo + '. Ahora Reemplazar o + Agregar a la lista.';
+      copiarTexto(url).then(ok => { if (ok && it.classList.contains('elegido')) av.textContent = '📋 URL copiada: ' + v.titulo + '. Ahora Reemplazar o + Agregar a la lista.'; });
       return true;
     };
     it.addEventListener('click', elegir);
