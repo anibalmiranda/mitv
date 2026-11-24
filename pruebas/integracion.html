@@ -524,6 +524,26 @@ prueba('audio de fondo: la grilla no puede sonar mientras está activo', () => {
   w.alternarFondoCelda(c()[1]);
   igual(w.eval('config.fondoAudio'), '');
 });
+prueba('playlist con un video privado o eliminado: se salta al siguiente en vez de marcar la lista caída', () => {
+  const celda = d.createElement('div');
+  celda.className = 'celda';
+  celda.dataset.tipo = 'lista';
+  const ifr = d.createElement('iframe');
+  celda.appendChild(ifr);
+  d.body.appendChild(celda);
+  const recibidas = [];
+  ifr.contentWindow.postMessage = m => recibidas.push(JSON.parse(m).func);
+  try {
+    celda._playlist = ['a', 'b', 'c']; celda._playlistIndex = 0;
+    cierto(w.saltarNoDisponible(celda, ifr)); igual(recibidas, ['nextVideo']);
+    celda._playlistIndex = 2; recibidas.length = 0;
+    cierto(w.saltarNoDisponible(celda, ifr), 'el último salta al primero'); igual(recibidas, ['playVideoAt']);
+    cierto(w.saltarNoDisponible(celda, ifr));
+    cierto(!w.saltarNoDisponible(celda, ifr), 'si fallan todos, queda no disponible');
+    celda.dataset.tipo = 'video'; celda._saltosLista = 0;
+    cierto(!w.saltarNoDisponible(celda, ifr), 'un video suelto no se salta');
+  } finally { celda.remove(); }
+});
 prueba('cuenta atrás: amarillo de 13 a 14 y rojo al llegar a cero', () => {
   tecla('t'); cierto(d.getElementById('cuentaAtras').classList.contains('visible'));
   w.eval('config.cuentaAtras.entrada = "08:00"; config.cuentaAtras.semana = 9');

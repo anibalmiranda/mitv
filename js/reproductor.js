@@ -29,6 +29,22 @@ function escucharYT(iframe, idx) {
   setTimeout(enviar, 1000);
   setTimeout(enviar, 3000);
 }
+// Playlist o Mix con un video privado, eliminado o que su dueño no deja ver fuera de YouTube: YouTube no lo salta
+// solo y avisa el error como si fallara toda la lista. Se pasa al siguiente; solo si fallan todos (o MAX seguidos
+// cuando no se sabe cuántos trae) el cuadro queda "no disponible". Devuelve true si saltó.
+const MAX_SALTOS_LISTA = 30;
+function saltarNoDisponible(celda, ifr) {
+  if (celda.dataset.tipo !== 'lista') return false;
+  const total = Array.isArray(celda._playlist) ? celda._playlist.length : 0;
+  celda._saltosLista = (celda._saltosLista || 0) + 1;
+  if (celda._saltosLista > (total > 1 ? total : MAX_SALTOS_LISTA)) return false;
+  if (total > 1 && celda._playlistIndex >= total - 1) comandoYT(ifr, 'playVideoAt', [0]);
+  else comandoYT(ifr, 'nextVideo');
+  const est = celda.querySelector('.fila-audio .estado');
+  if (est) est.textContent = '⏭ saltando un video no disponible';
+  return true;
+}
+
 window.addEventListener('message', e => {
   let host = '';
   try { host = new URL(e.origin).hostname; } catch (err) { return; }
@@ -40,7 +56,12 @@ window.addEventListener('message', e => {
   if (!ifr) return;
   const celda = ifr.parentElement;
   // Error del reproductor: video borrado, privado, no incrustable o directo que ya no existe
-  if (d.event === 'onError') { marcarCaido(celda, d.info); return; }
+  if (d.event === 'onError') {
+    if (saltarNoDisponible(celda, ifr)) return;
+    celda._saltosLista = 0;   // al volver a cargarla se intenta de nuevo
+    marcarCaido(celda, d.info);
+    return;
+  }
   if (!d.info || typeof d.info !== 'object') return;
   // Primer mensaje = reproductor listo: re-aplica el audio por si la orden llegó antes de que cargara
   if (!celda._listo) {
@@ -89,6 +110,7 @@ window.addEventListener('message', e => {
   if (typeof d.info.playerState === 'number') {
     // 0 = terminado, 2 = pausado, 5 = sin iniciar → barras quietas
     celda.classList.toggle('pausado', [0, 2, 5].includes(d.info.playerState));
+    if (d.info.playerState === 1) celda._saltosLista = 0;
     if (d.info.playerState === 1 && celda.classList.contains('caido')) quitarCaido(celda);   // volvió a funcionar
     // En modo solo audio, si uno silenciado empieza a reproducir, se pausa
     // (salvo que esté en pleno fundido de salida)
