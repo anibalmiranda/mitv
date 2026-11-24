@@ -10,6 +10,8 @@
 //                conexiones con un mismo equipo y el resto no cargaba), con cámaras de foto fija (snapshot) y con
 //                usuario:clave en la URL (el navegador no los manda en una imagen).
 //  - 'foto':     cámara de foto fija sin servidor: el navegador la vuelve a pedir cada INTERVALO_FOTO_MS.
+//  - 'web':      cámara de ipcamlive.com: su reproductor oficial en un iframe (siempre silenciado, sin controles: la
+//                capa de clic queda encima), con su foto (snapshot) de fondo mientras no se ve.
 // Los archivos se cargan en orden desde index.html y comparten variables (scripts clásicos).
 
 const REINTENTO_CAMARA_MS = 15000;   // si la cámara no responde, se vuelve a intentar cada 15 s
@@ -21,6 +23,18 @@ const INTERVALO_FOTO_MS = 2000;      // modo 'foto': cada cuánto se vuelve a pe
 function crearCamara(celda, url) {
   celda.classList.add('camara');
   celda._urlCamara = url;
+  if (esCamaraWeb(url)) {
+    const ifr = document.createElement('iframe');
+    ifr.className = 'camara';
+    ifr.allow = 'autoplay; fullscreen';
+    ifr.referrerPolicy = 'strict-origin-when-cross-origin';
+    ifr.tabIndex = -1;
+    ifr.title = 'Cámara';
+    celda.style.backgroundImage = 'url("' + url.replace('/player/player.php', '/player/snapshot.php').replace(/&autoplay=1$/, '') + '")';
+    celda.appendChild(ifr);
+    ajustarCamara(celda);
+    return;
+  }
   const img = document.createElement('img');
   img.className = 'camara';
   img.alt = '';
@@ -47,6 +61,7 @@ function pareceFoto(url) {
 function tieneCredenciales(url) { try { return !!new URL(url).username; } catch (e) { return false; } }
 function modoCamara(celda) {
   const url = celda._urlCamara;
+  if (esCamaraWeb(url)) return 'web';
   if (servidorOk === true) {
     const delMismoEquipo = celdas.filter(c => c.dataset.tipo === 'camara' && equipoDe(c._urlCamara) === equipoDe(url)).length;
     if (delMismoEquipo > LIMITE_DIRECTO || pareceFoto(url) || tieneCredenciales(url)) return 'servidor';
@@ -60,7 +75,7 @@ function camaraActiva(celda) {
 
 // Conecta, cambia de modo o corta la cámara según si se está viendo
 function ajustarCamara(celda) {
-  const img = celda.querySelector('img.camara');
+  const img = celda.querySelector('img.camara, iframe.camara');
   if (!img) return;
   if (!camaraActiva(celda)) { detenerCamara(celda); return; }
   const modo = modoCamara(celda);
@@ -68,18 +83,19 @@ function ajustarCamara(celda) {
   detenerCamara(celda);
   celda._modoCam = modo;
   celda._conectada = true;
-  if (modo === 'directo') img.src = celda._urlCamara;
+  if (modo === 'directo' || modo === 'web') img.src = celda._urlCamara;
   else sondear(celda, celda._sondeoId);
 }
 function ajustarCamaras() { celdas.forEach(c => { if (c.dataset.tipo === 'camara') ajustarCamara(c); }); }
 
 function detenerCamara(celda) {
-  const img = celda.querySelector('img.camara');
+  const img = celda.querySelector('img.camara, iframe.camara');
   clearTimeout(celda._reintento);
   clearTimeout(celda._sondeo);
   celda._sondeoId = (celda._sondeoId || 0) + 1;   // corta cualquier pedido en curso del modo anterior
   celda._conectada = false;
-  if (img) img.removeAttribute('src');
+  if (img && img.tagName === 'IFRAME') { if (img.getAttribute('src') && img.src !== 'about:blank') img.src = 'about:blank'; }   // descarga su reproductor
+  else if (img) img.removeAttribute('src');
   if (celda._urlObjeto) { URL.revokeObjectURL(celda._urlObjeto); celda._urlObjeto = null; }
 }
 

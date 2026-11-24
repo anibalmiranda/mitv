@@ -564,6 +564,23 @@ prueba('ventana de YouTube abierta: Multi YouTube en silencio; al cerrarla vuelv
     igual(c().filter(x => x.dataset.mute === '0').map(x => c().indexOf(x)), [2], 'sigue sonando el que elegiste');
   } finally { w.open = original; }
 });
+prueba('cámara de ipcamlive: su reproductor en un iframe, sin ser un reproductor de YouTube', () => {
+  const celda = d.createElement('div');
+  celda.className = 'celda';
+  d.body.appendChild(celda);
+  try {
+    const url = 'https://g3.ipcamlive.com/player/player.php?alias=65ac10408e8e9&autoplay=1';
+    w.crearCamara(celda, url);
+    const ifr = celda.querySelector('iframe.camara');
+    cierto(ifr, 'se muestra en un iframe');
+    igual(ifr.getAttribute('src'), url, 'con su reproductor');
+    igual(celda._modoCam, 'web');
+    cierto(celda.style.backgroundImage.includes('snapshot.php?alias=65ac10408e8e9'), 'su foto de fondo');
+    igual(celda.querySelector(w.eval('SEL_REPRODUCTOR')), null, 'no recibe órdenes de YouTube');
+    w.detenerCamara(celda);
+    igual(ifr.getAttribute('src'), 'about:blank', 'al dejar de verse se descarga');
+  } finally { celda.remove(); }
+});
 prueba('video bloqueado fuera de YouTube (101/150): cuadro útil y sin audio', () => {
   w.marcarCaido(c()[2], 150);
   cierto(c()[2]._externo && c()[2].querySelector('.aviso-externo'));

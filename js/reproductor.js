@@ -35,7 +35,7 @@ window.addEventListener('message', e => {
   let d;
   try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (err) { return; }
   if (!d) return;
-  const ifr = [...contenedor.querySelectorAll('iframe')].find(f => f.contentWindow === e.source);
+  const ifr = [...contenedor.querySelectorAll('iframe:not(.camara)')].find(f => f.contentWindow === e.source);
   if (!ifr) return;
   const celda = ifr.parentElement;
   // Error del reproductor: video borrado, privado, no incrustable o directo que ya no existe

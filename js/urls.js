@@ -42,6 +42,12 @@ function parsear(linea) {
   // Canal de rudo.video (TVN, Mega, T13…): su página oficial en un iframe (rudo.js)
   if (host === 'rudo.video' && partes[0] === 'live' && /^[\w-]+$/.test(partes[1] || ''))
     return { tipo: 'rudo', id: partes[1].toLowerCase() };
+  // Cámara de ipcamlive.com (su reproductor, p. ej. g3.ipcamlive.com/player/player.php?alias=…, o el link
+  // ipcamlive.com/<alias>): se muestra su reproductor oficial en un iframe (camaras.js)
+  if (/(^|\.)ipcamlive\.com$/.test(host)) {
+    const alias = u.searchParams.get('alias') || (partes.length === 1 && /^[0-9a-z]{8,}$/i.test(partes[0]) ? partes[0] : '');
+    if (/^[0-9a-z]+$/i.test(alias)) return { tipo: 'camara', id: urlIpcamlive(alias), alias };
+  }
   // Canal de TV por HLS: la dirección termina en .m3u8 (puede traer parámetros)
   if (/^https?:\/\//i.test(s) && /\.m3u8($|[?#])/i.test(u.pathname + u.search)) return { tipo: 'hls', id: s };
   // Cualquier otra dirección http(s):// escrita completa se toma como cámara IP (stream MJPEG o imagen)
@@ -119,6 +125,10 @@ function urlEmbed(item, muteado, autoplay) {
   return null;
 }
 
+function urlIpcamlive(alias) { return 'https://g3.ipcamlive.com/player/player.php?alias=' + encodeURIComponent(alias) + '&autoplay=1'; }
+// Cámara que se muestra con el reproductor de su página (ipcamlive) en vez de un stream de imagen
+function esCamaraWeb(url) { return /^https:\/\/g3\.ipcamlive\.com\/player\/player\.php\?alias=/.test(url || ''); }
+
 function nombreInicial(item, idx) {
   if (item.tipo === 'hls') {
     const t = config.tv[item.tipo + ':' + item.id];
@@ -126,6 +136,7 @@ function nombreInicial(item, idx) {
     try { return 'Canal de TV ' + new URL(item.id).host; } catch (e) { return 'Canal de TV'; }
   }
   if (item.tipo === 'camara') {
+    if (item.alias) return 'Cámara ipcamlive ' + item.alias;
     try { return 'Cámara ' + new URL(item.id).host; } catch (e) { return 'Cámara'; }
   }
   if (item.tipo === 'rudo') return item.id.toUpperCase() + ' (rudo.video)';

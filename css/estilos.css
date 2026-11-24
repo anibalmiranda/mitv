@@ -427,10 +427,12 @@ button.btn { border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; 
 #avisoBuscar.ok { color: #9be7a6; }
 
 /* Cámaras IP (stream MJPEG): sin audio, sin buscar parecido; la capa de clic cubre todo (no hay controles de YouTube) */
+.celda.camara { background-size: cover; background-position: center; }   /* foto de la cámara de ipcamlive mientras carga */
+.celda iframe.camara { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
 .celda img.camara { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 .celda.camara .capa-audio { bottom: 0; cursor: zoom-in; }
 .celda.camara .icono-audio, .celda.camara .buscar, .celda.camara .aviso-caido button { display: none; }
-body.arrastrando .celda img.camara { pointer-events: none; }
+body.arrastrando .celda img.camara, body.arrastrando .celda iframe.camara { pointer-events: none; }
 /* Aviso de directo que se está buscando o que no transmite */
 .celda .aviso-caido .directo { font-size: 12px; color: #9fd0ff; }
 .celda .aviso-caido .directo:empty { display: none; }

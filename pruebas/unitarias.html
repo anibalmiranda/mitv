@@ -98,6 +98,15 @@ prueba('canales de TV: las direcciones .m3u8 son tipo hls (también con parámet
   igual(parsear('https://canal.tv/p.m3u8?network_id=5').tipo, 'hls');
   igual(parsear('http://1.2.3.4/video.mjpg').tipo, 'camara', 'lo demás sigue siendo cámara');
 });
+prueba('cámaras de ipcamlive: su reproductor (player.php?alias= o ipcamlive.com/<alias>)', () => {
+  const url = 'https://g3.ipcamlive.com/player/player.php?alias=65ac10408e8e9&autoplay=1';
+  igual(p('https://g3.ipcamlive.com/player/player.php?alias=65ac10408e8e9&autoplay=1'), { tipo: 'camara', id: url, alias: '65ac10408e8e9' });
+  igual(parsear('https://ipcamlive.com/player/player.php?alias=65ac10408e8e9').id, url, 'sin autoplay ni g3');
+  igual(parsear('https://www.ipcamlive.com/65ac10408e8e9').id, url, 'el link para compartir');
+  cierto(esCamaraWeb(url));
+  cierto(!esCamaraWeb('http://1.2.3.4/video.mjpg'));
+  igual(nombreInicial(parsear(url), 0), 'Cámara ipcamlive 65ac10408e8e9');
+});
 prueba('nombre de un canal de TV: el de la lista importada o el del servidor', () => {
   config.tv['hls:https://canal.tv/a.m3u8'] = { nombre: '24h', grupo: 'Informativos' };
   igual(nombreInicial(parsear('https://canal.tv/a.m3u8'), 0), '24h');

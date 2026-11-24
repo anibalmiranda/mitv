@@ -54,7 +54,12 @@ function mostrarSuperFav() {
   if (!item || item.tipo === 'error') return;
   ventanaSuper.dataset.linea = config.superFav;
   let medio;
-  if (item.tipo === 'camara') {
+  if (item.tipo === 'camara' && esCamaraWeb(item.id)) {
+    medio = document.createElement('iframe');   // cámara de ipcamlive: su reproductor
+    medio.src = item.id;
+    medio.allow = 'autoplay';
+    medio.title = 'Super favorito';
+  } else if (item.tipo === 'camara') {
     medio = document.createElement('img');
     medio.referrerPolicy = 'no-referrer';
     medio.src = item.id;

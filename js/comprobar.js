@@ -23,6 +23,7 @@ async function comprobarLinea(linea) {
     const d = await api('directo', { canal: p.id });
     return d.vivo ? { ok: true } : { ok: false, motivo: 'el canal no está transmitiendo' };
   }
+  if (p.tipo === 'camara' && esCamaraWeb(p.id)) return { ok: true };   // su reproductor (ipcamlive) avisa si no transmite
   if (p.tipo === 'camara') {
     const r = await fetch('/api/camara?url=' + encodeURIComponent(p.id), { cache: 'no-store' });
     if (r.ok) return { ok: true };

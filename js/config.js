@@ -7,7 +7,7 @@ const MAX_FAV = 9;
 const VALOR_FAV = '__favoritos__';
 const $ = id => document.getElementById(id);
 // El reproductor de un cuadro: un iframe de YouTube o un <video> de un canal de TV por HLS (tv.js)
-const SEL_REPRODUCTOR = 'iframe, video.tv';
+const SEL_REPRODUCTOR = 'iframe:not(.camara), video.tv';   // las cámaras de ipcamlive también son iframes (camaras.js)
 const contenedor = $('contenedor');
 const vacio = $('vacio');
 const fondo = $('fondo');
