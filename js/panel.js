@@ -70,6 +70,7 @@ function abrirPanel() {
   llenarCamposCuenta();
   llenarProgramas();
   llenarSelectorEntrada();
+  llenarModelosIA();
   aviso.textContent = '';
   aviso.classList.remove('ok');
   resetEliminar();

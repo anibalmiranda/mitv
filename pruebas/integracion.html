@@ -269,6 +269,40 @@ prueba('🔍 buscar parecido: resultados como miniaturas, en vivo y con el permi
     w.cerrarBuscar();
   }
 });
+prueba('🔍 de arriba (tecla /): la misma búsqueda, y lo elegido se agrega al final de la lista que elijas', async () => {
+  const R = [
+    { id: 'gggggggggg1', titulo: 'Jazz en vivo', canal: 'Canal J', vivo: true, detalle: '', incrustable: true, miniatura: 'about:blank' },
+    { id: 'gggggggggg2', titulo: 'Bloqueado', canal: 'Canal B', vivo: false, detalle: '', incrustable: false, miniatura: 'about:blank' }];
+  w.eval('config.listas["Destino"] = ["https://www.youtube.com/watch?v=gggggggggg1"]');
+  w.eval('window._apiOrig = api; window._pedidos = []; api = async (que, p) => { _pedidos.push([que, p]); return { resultados: ' + JSON.stringify(R) + ' }; }');
+  try {
+    tecla('/');
+    cierto(d.getElementById('fondoBuscar').classList.contains('abierto'), 'la tecla / la abre');
+    cierto(d.getElementById('btnBuscarReemplazar').hidden && d.getElementById('btnBuscarDirecto').hidden, 'sin Reemplazar ni Directo actual');
+    cierto(!d.getElementById('buscarDestino').hidden);
+    d.getElementById('buscarLista').value = 'Destino';
+    d.getElementById('buscarTexto').value = 'jazz';
+    d.getElementById('buscarSoloVivo').checked = false;
+    d.getElementById('btnBuscarYT').click(); await espera(100);
+    igual(w._pedidos[w._pedidos.length - 1], ['buscar', { q: 'jazz', vivo: '0' }]);
+    const res = [...d.querySelectorAll('#buscarResultados .resultado')];
+    igual(res.length, 2);
+    igual(res[0].querySelector('.es-actual').textContent, 'ya está en la lista', 'marca lo que ya tienes en esa lista');
+    d.getElementById('buscarNuevaUrl').value = 'https://youtu.be/gggggggggg3';
+    d.getElementById('btnBuscarAgregar').click();
+    igual(w.eval('config.listas["Destino"]'), ['https://www.youtube.com/watch?v=gggggggggg1', 'https://youtu.be/gggggggggg3'], 'al final de la lista elegida');
+    cierto(d.getElementById('fondoBuscar').classList.contains('abierto'), 'queda abierta para seguir agregando');
+    d.getElementById('btnBuscarAgregar').click();
+    igual(w.eval('config.listas["Destino"]').length, 2, 'no la repite');
+    w.cerrarBuscar();
+    w.abrirBuscar(c()[0]);
+    cierto(!d.getElementById('btnBuscarReemplazar').hidden && d.getElementById('buscarDestino').hidden, 'el 🔍 de un cuadro sigue igual que antes');
+  } finally {
+    w.eval('api = _apiOrig');
+    w.cerrarBuscar();
+    delete w.eval('config.listas')['Destino'];
+  }
+});
 prueba('enfoque: viendo un solo canal más de 2 min, los demás no consultan a YouTube; al volver se ponen al día', async () => {
   w.eval('window._apiOrig = api; window._srvOrig = servidorOk; servidorOk = true; window._pedidos = []; ' +
          'api = async (que, p) => { _pedidos.push([que, p]); return { vivo: true, directo: true }; }');
@@ -809,6 +843,48 @@ prueba('eliminar un grupo completo no toca la lista suelta con el mismo nombre',
   igual(nombres.filter(n => n.startsWith('TV / ')), [], 'sin sub-listas');
   cierto(nombres.includes('TV'), 'la lista suelta "TV" sigue');
   igual(w.eval('config.tv["hls:https://x.invalid/1.m3u8"]'), undefined, 'se limpian los datos de canales sin uso');
+  cambiarLista('A');
+});
+prueba('al reordenar, los títulos de grupo "# ── … ──" se mueven con el primer canal de su grupo', () => {
+  const v = n => 'https://www.youtube.com/watch?v=ggggggggg' + n + n;
+  w.eval('config.listas["G"] = ' + JSON.stringify(['# ── Uno ──', v(1), v(2), '# ── Dos ──', v(3), '# suelto al final']) +
+         '; config.actual = "G"; config.vistaFav = false');
+  w.pintarSelector(); w.render(true);
+  w.eval('celdas.reverse()');
+  w.sincronizarUrls();
+  igual(w.eval('config.listas["G"]'), ['# ── Dos ──', v(3), v(2), '# ── Uno ──', v(1), '# suelto al final']);
+  delete w.eval('config.listas')['G'];
+  cambiarLista('A');
+});
+prueba('⚙ 🤖 Organizar con IA (esta lista): arma los grupos con su título en el cuadro de texto', async () => {
+  w.eval('config.listas["O"] = []; config.actual = "O"; config.vistaFav = false');
+  w.pintarSelector(); w.render(true);
+  w.abrirPanel();
+  const v = n => 'https://www.youtube.com/watch?v=ooooooooo' + n + n;
+  w.eval('config.nombres["video:ooooooooo11"] = { titulo: "lofi hip hop radio", autor: "Lofi Girl", vivo: true }');
+  d.getElementById('urls').value = ['# ── Viejo ──', v(1), v(2), '# ✘ 2026-01-01 caído · ' + v(9), v(3), 'https://x.invalid/canal.m3u8'].join('\n');
+  const sel = d.getElementById('selModeloIA');
+  sel.innerHTML = ''; sel.appendChild(new w.Option('modelo:prueba', 'modelo:prueba'));
+  const fetchReal = w.fetch, pedidos = [];
+  w.fetch = async (url, op) => {
+    pedidos.push({ url, cuerpo: JSON.parse(op.body), cabecera: op.headers['X-MultiYouTube'] });
+    return { json: async () => ({ grupos: [{ titulo: 'Música', items: [1, 3] }, { titulo: 'TV', items: [4, 2] }] }) };
+  };
+  try {
+    d.getElementById('selAlcanceIA').value = 'lista';
+    await w.organizarConIA();
+  } finally { w.fetch = fetchReal; }
+  igual(pedidos.length, 1);
+  igual(pedidos[0].url, '/api/organizar');
+  igual(pedidos[0].cuerpo.modelo, 'modelo:prueba');
+  igual(pedidos[0].cuerpo.elementos.length, 4, 'solo los canales (sin títulos ni descartados)');
+  igual(pedidos[0].cuerpo.elementos[0], 'lofi hip hop radio — Lofi Girl [transmisión en vivo]');
+  cierto(/x\.invalid\/canal\.m3u8 \[canal de TV\]$/.test(pedidos[0].cuerpo.elementos[3]), pedidos[0].cuerpo.elementos[3]);
+  igual(d.getElementById('urls').value.split('\n'),
+        ['# ── Música ──', v(1), v(3), '# ── TV ──', 'https://x.invalid/canal.m3u8', v(2), '# ✘ 2026-01-01 caído · ' + v(9)]);
+  igual(w.eval('config.listas["O"]'), [], 'no se guarda hasta apretar Guardar');
+  w.cerrarPanel();
+  delete w.eval('config.listas')['O'];
   cambiarLista('A');
 });
 prueba('al guardar una lista se quitan las URLs repetidas (queda la primera)', async () => {

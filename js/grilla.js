@@ -52,6 +52,8 @@ function render(reutilizar) {
   [...contenedor.children].forEach(c => { if (!candidatas.has(c)) c.remove(); });
   celdas = [];
   comentarios = [];
+  anclasComentarios = [];
+  let sinAncla = [];
 
   $('vacioTitulo').textContent = config.vistaFav ? 'Aún no tienes favoritos' : 'Sin videos en esta lista';
   $('vacioTexto').textContent = config.vistaFav
@@ -72,7 +74,15 @@ function render(reutilizar) {
 
   fuente().forEach(linea => {
     const item = parsear(linea);
-    if (!item) { if (linea.trim()) comentarios.push(linea); return; }
+    if (!item) {
+      if (linea.trim()) {
+        const a = { texto: linea, ancla: null };   // el ancla es la próxima línea que no sea comentario
+        comentarios.push(linea); anclasComentarios.push(a); sinAncla.push(a);
+      }
+      return;
+    }
+    sinAncla.forEach(a => { a.ancla = clave(linea) || linea; });
+    sinAncla = [];
 
     // ¿Ya estaba en pantalla? Se conserva tal cual (sigue reproduciendo) y solo se ajusta a esta vista
     const previa = item.tipo !== 'error' && anteriores.get(clave(linea));
@@ -487,9 +497,23 @@ function salirAhorro() {
 }
 setInterval(revisarAhorro, 15000);
 
+// Vuelve a poner los comentarios entre las líneas: cada uno justo antes de la línea que lo seguía (así los
+// títulos de grupo "# ── Lofi ──" se mueven con el primer canal de su grupo); los demás, al final.
+// claveDe permite decir que una línea nueva ocupa el lugar de otra (al reemplazar una URL).
+function conComentarios(lineas, claveDe) {
+  const k = claveDe || (l => clave(l) || l);
+  const usados = new Set(), res = [];
+  lineas.forEach(l => {
+    const kl = k(l);
+    anclasComentarios.forEach((a, i) => { if (!usados.has(i) && a.ancla !== null && a.ancla === kl) { usados.add(i); res.push(a.texto); } });
+    res.push(l);
+  });
+  anclasComentarios.forEach((a, i) => { if (!usados.has(i)) res.push(a.texto); });   // sin su línea: al final
+  return res;
+}
 // Reescribe la lista que se está viendo según el orden visual de las celdas
 function sincronizarUrls() {
-  fijarFuente(celdas.map(c => c.dataset.linea).concat(comentarios));
+  fijarFuente(conComentarios(celdas.map(c => c.dataset.linea)));
   guardar();
   pintarSelector();
 }

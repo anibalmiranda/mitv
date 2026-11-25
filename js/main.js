@@ -23,7 +23,7 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Enter' && e.ctrlKey && panelAbierto) guardarPanel();
   // Atajos de una tecla (no mientras escribes en un campo ni con una ventana abierta):
-  //  + / − volumen del que suena · M silenciar todo · S super favorito · T cuenta atrás · B audio de fondo · E estado de la lista · F pantalla completa · C carrusel · 1 a 9 ir a ese video
+  //  + / − volumen del que suena · / buscar en YouTube · M silenciar todo · S super favorito · T cuenta atrás · B audio de fondo · E estado de la lista · F pantalla completa · C carrusel · 1 a 9 ir a ese video
   if (!panelAbierto && !buscarAbierto && !enCampo && !e.ctrlKey && !e.altKey && !e.metaKey) {
     const k = e.key.toLowerCase();
     if (k === '+' || k === '=') { e.preventDefault(); cambiarVolumenActual(5); }
@@ -33,6 +33,7 @@ document.addEventListener('keydown', e => {
     if (k === 't') { e.preventDefault(); alternarCuenta(); }
     if (k === 'b') { e.preventDefault(); alternarFondo(); }
     if (k === 'e') { e.preventDefault(); abrirEstado(); }
+    if (k === '/') { e.preventDefault(); abrirBuscarGlobal(); }   // buscar en YouTube (buscar.js)
     if (k === 'f') { e.preventDefault(); btnPantalla.click(); }
     if (k === 'c') {
       e.preventDefault();

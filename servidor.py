@@ -327,6 +327,167 @@ def videos_de_lista(lista):
     return {'videos': ids[:200]}
 
 
+# ---------- Organizar una lista con IA (Ollama, instalado en este equipo) ----------
+# La página manda los nombres de los canales de una lista; el modelo los agrupa por tema (la música por estilo, los
+# canales de TV y las cámaras por región) y devuelve los grupos. Todo queda en este equipo: no sale a internet.
+OLLAMA = os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434').rstrip('/')
+if not OLLAMA.startswith('http'):
+    OLLAMA = 'http://' + OLLAMA
+MAX_ITEMS_IA = 300
+ESPERA_IA_S = 600   # un modelo grande sin tarjeta de video puede tardar varios minutos
+INSTRUCCIONES_IA = """Clasifica cada uno de los {n} elementos de la lista "{lista}" (canales de video, radios, canales de TV y cámaras en vivo).
+Para cada elemento indica:
+- "tipo": "musica" (radios o mezclas de música), "lugar" (cámara o transmisión en vivo de un lugar), "tv" (canal de TV o de noticias) u "otro".
+- "grupo": si es musica, su estilo con un nombre común en español (Lofi, Jazz, Jazzhop y groove, Soul y funk, Bossa nova,
+  House y electrónica, Chillout, Ambient, Rock, Pop, Éxitos de los 80, Música clásica, Música para concentrarse…);
+  si es otro, su tema en 1 a 3 palabras; si es lugar o tv, "".
+- "pais": si es lugar o tv, el PAÍS en español (no la ciudad: Tokio → "Japón", Duluth → "Estados Unidos").
+  Si es de Chile, "Chile norte", "Chile centro" o "Chile sur". Si no, "".
+- "ciudad": si es lugar o tv, la ciudad o localidad si se sabe; si no, "".
+- "zona": si es lugar o tv, el continente (Sudamérica, Norteamérica, Europa, Asia, África, Oceanía); si no, "".
+Usa siempre el mismo nombre para lo que va junto. No te saltes ningún elemento.
+Responde solo JSON: {{"elementos": [{{"n": 1, "tipo": "lugar", "grupo": "", "pais": "Japón", "ciudad": "Tokio", "zona": "Asia"}}]}}
+
+Elementos:
+{elementos}"""
+
+
+def ollama(ruta, datos=None, espera=10):
+    req = urllib.request.Request(OLLAMA + ruta, method='POST' if datos is not None else 'GET',
+                                 data=json.dumps(datos).encode('utf-8') if datos is not None else None,
+                                 headers={'Content-Type': 'application/json'})
+    with urllib.request.urlopen(req, timeout=espera) as r:
+        return json.loads(r.read().decode('utf-8'))
+
+
+def modelos_ia():
+    try:
+        modelos = [m.get('name', '') for m in ollama('/api/tags').get('models', [])]
+    except (urllib.error.URLError, OSError, ValueError):
+        return {'error': 'Ollama no responde en ' + OLLAMA + ': ¿está abierto?', 'modelos': []}
+    modelos = [m for m in modelos if m and 'embed' not in m.lower()]
+    return {'modelos': modelos} if modelos else {'error': 'Ollama no tiene modelos: instala uno (p. ej. "ollama pull llama3.1:8b")', 'modelos': []}
+
+
+def grupos_validos(respuesta, n):
+    # Lo que contestó el modelo, corregido: cada número (1..n) en un solo grupo; los que faltan van a "Otros"
+    vistos, grupos = set(), []
+    respuesta = respuesta if isinstance(respuesta, dict) else {}
+    for g in respuesta.get('grupos') or []:
+        if not isinstance(g, dict):
+            continue
+        titulo = ' '.join(str(g.get('titulo') or '').replace('#', '').split())[:40] or 'Grupo'
+        items = []
+        for x in g.get('items') or []:
+            try:
+                i = int(x)
+            except (TypeError, ValueError):
+                continue
+            if 1 <= i <= n and i not in vistos:
+                vistos.add(i)
+                items.append(i)
+        if items:
+            otro = next((h for h in grupos if h['titulo'].lower() == titulo.lower()), None)
+            if otro:
+                otro['items'] += items
+            else:
+                grupos.append({'titulo': titulo, 'items': items})
+    faltan = [i for i in range(1, n + 1) if i not in vistos]
+    if faltan:
+        grupos.append({'titulo': 'Otros', 'items': faltan})
+    return grupos
+
+
+ORDEN_TIPOS_IA = {'musica': 0, 'lugar': 1, 'tv': 2, 'otro': 3}
+# Chile de norte a sur: el modelo no siempre sabe la zona, así que se deduce de la ciudad o del nombre del canal
+ZONAS_CHILE = [
+    ('Rapa Nui', 'rapa nui, isla de pascua'),
+    ('Chile sur', 'concepci, conce, san pedro de la paz, talcahuano, chill, ñuble, nuble, los ángeles, los angeles, angol, '
+                  'temuco, araucan, pucón, pucon, villarrica, valdivia, osorno, puerto montt, chilo, castro, quell, ays, '
+                  'coyhaique, punta arenas, magallanes, puerto williams, patagonia, natales, alerce'),
+    ('Chile norte', 'arica, iquique, tarapac, alto hospicio, antofagasta, calama, mejillones, tocopilla, taltal, copiap, '
+                    'caldera, atacama, vallenar, la serena, coquimbo, ovalle, elqui'),
+    ('Chile centro', 'santiago, valpara, viña, vina del mar, reñaca, renaca, quilpu, villa alemana, limache, quillota, '
+                     'los andes, aconcagua, san antonio, cartagena, llolleo, algarrobo, rancagua, san vicente, santa cruz, '
+                     'pichilemu, colchagua, curic, talca, maule, loncomilla, linares, farellones, valle nevado, la parva, '
+                     'el colorado, maipo, pudahuel, providencia, las condes, casablanca'),
+]
+RX_ZONAS_CHILE = [(z, re.compile(r'(?<![a-záéíóúñ])(' + '|'.join(re.escape(c.strip()) for c in claves.split(',')) + ')'))
+                  for z, claves in ZONAS_CHILE]
+
+
+def zona_chile(texto):
+    t = (texto or '').lower() + ' '
+    return next((z for z, rx in RX_ZONAS_CHILE if rx.search(t)), 'Chile')
+ORDEN_ZONAS_IA = ['sudamérica', 'norteamérica', 'europa', 'asia', 'oceanía', 'áfrica']
+
+
+def agrupar_clasificacion(respuesta, n, maximo, textos=()):
+    # Junta los elementos por su "grupo". Si quedan demasiados grupos, los de un solo elemento se juntan por
+    # continente (lugares y TV) o en "Otros". Orden: música, lugares, TV y lo demás; los lugares por continente.
+    lista = (respuesta or {}).get('elementos') if isinstance(respuesta, dict) else None
+    grupos = {}
+    for e in lista if isinstance(lista, list) else []:
+        if not isinstance(e, dict):
+            continue
+        tipo = str(e.get('tipo') or 'otro').lower().replace('ú', 'u')
+        tipo = tipo if tipo in ORDEN_TIPOS_IA else 'otro'
+        nombre = e.get('pais') if tipo in ('lugar', 'tv') and e.get('pais') else e.get('grupo')
+        pais = str(e.get('pais') or '').lower()
+        if tipo != 'musica' and (not pais or pais.startswith('chile')):
+            i = e.get('n') if isinstance(e.get('n'), int) else 0
+            zona_cl = zona_chile(str(e.get('ciudad') or '') + ' ' + (textos[i - 1] if 1 <= i <= len(textos) else ''))
+            if zona_cl != 'Chile' or pais.startswith('chile'):   # un lugar de Chile: por zona, de norte a sur
+                nombre, tipo = zona_cl, (tipo if tipo != 'otro' else 'lugar')
+        nombre = ' '.join(str(nombre or '').replace('#', '').split())[:40] or 'Otros'
+        zona = ' '.join(str(e.get('zona') or '').split())
+        g = grupos.setdefault(nombre.lower(), {'titulo': nombre, 'items': [], 'tipo': tipo, 'zona': zona})
+        g['items'].append(e.get('n'))
+    gs = list(grupos.values())
+    if len(gs) > maximo:
+        juntos = {}
+        for g in gs:
+            if len(g['items']) > 1:
+                juntos.setdefault(g['titulo'].lower(), g)
+                continue
+            destino = g['zona'] if g['tipo'] in ('lugar', 'tv') and g['zona'] else ('Otra música' if g['tipo'] == 'musica' else 'Otros')
+            d = juntos.setdefault(destino.lower(), {'titulo': destino, 'items': [], 'tipo': g['tipo'], 'zona': g['zona']})
+            d['items'] += g['items']
+        gs = list(juntos.values())
+    def orden(g):
+        z = g['zona'].lower()
+        chile = ['Chile norte', 'Chile centro', 'Chile sur', 'Chile', 'Rapa Nui']
+        return (ORDEN_TIPOS_IA[g['tipo']], g['titulo'] not in chile, chile.index(g['titulo']) if g['titulo'] in chile else 0,
+                ORDEN_ZONAS_IA.index(z) if z in ORDEN_ZONAS_IA else len(ORDEN_ZONAS_IA),
+                g['titulo'] in ('Otros', 'Otra música'), -len(g['items']))
+    gs.sort(key=orden)
+    return grupos_validos({'grupos': gs}, n)
+
+
+def organizar_con_ia(modelo, lista, elementos):
+    texto = '\n'.join('%d. %s' % (i + 1, ' '.join(str(e).split())[:160]) for i, e in enumerate(elementos))
+    pedido = {
+        'model': modelo, 'stream': False, 'format': 'json',
+        'options': {'temperature': 0.1, 'num_ctx': 8192, 'num_predict': 300 + 40 * len(elementos)},
+        'messages': [
+            {'role': 'system', 'content': 'Clasificas canales de video. Respondes solo con JSON válido.'},
+            {'role': 'user', 'content': INSTRUCCIONES_IA.format(n=len(elementos), lista=lista, elementos=texto)}]}
+    try:
+        r = ollama('/api/chat', pedido, ESPERA_IA_S)
+    except urllib.error.HTTPError as e:
+        return {'error': 'Ollama respondió ' + str(e.code) + (' (¿existe el modelo ' + modelo + '?)' if e.code == 404 else '')}
+    except (urllib.error.URLError, OSError):
+        return {'error': 'Ollama no responde en ' + OLLAMA + ': ¿está abierto?'}
+    try:
+        respuesta = json.loads(((r or {}).get('message') or {}).get('content') or '')
+    except ValueError:
+        return {'error': 'el modelo no devolvió JSON válido: prueba de nuevo u otro modelo'}
+    grupos = agrupar_clasificacion(respuesta, len(elementos), max(3, min(12, len(elementos) // 3)), [str(e) for e in elementos])
+    if len(grupos) == 1 and grupos[0]['titulo'] == 'Otros':
+        return {'error': 'el modelo no armó grupos: prueba de nuevo u otro modelo'}
+    return {'grupos': grupos}
+
+
 def con_permisos(lista):
     # ¿El dueño permite verlo fuera de YouTube? (de a 3 a la vez; si YouTube no responde, queda "sin saber")
     def revisar(v):
@@ -862,6 +1023,8 @@ class Manejador(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         url = urllib.parse.urlsplit(self.path)
+        if url.path == '/api/organizar':
+            return self.organizar()
         if url.path != '/api/datos':
             return self.responder(404, {'error': 'consulta desconocida'})
         if not self.escritura_valida():
@@ -885,6 +1048,21 @@ class Manejador(SimpleHTTPRequestHandler):
         except OSError as e:
             return self.responder(500, {'error': 'no se pudo escribir el archivo: ' + str(e)})
         self.responder(200, {'ok': True})
+
+    def organizar(self):
+        if not self.escritura_valida():
+            return self.responder(403, {'error': 'no permitido'})
+        try:
+            largo = int(self.headers.get('Content-Length') or 0)
+            d = json.loads(self.rfile.read(largo).decode('utf-8')) if 0 < largo <= 1024 * 1024 else None
+        except ValueError:
+            d = None
+        elementos = d.get('elementos') if isinstance(d, dict) else None
+        modelo = d.get('modelo') if isinstance(d, dict) else None
+        if not isinstance(elementos, list) or not 2 <= len(elementos) <= MAX_ITEMS_IA or \
+                not isinstance(modelo, str) or not re.match(r'^[\w.:/-]{1,100}$', modelo):
+            return self.responder(400, {'error': 'datos inválidos'})
+        self.responder(200, organizar_con_ia(modelo, str(d.get('lista') or '')[:60], elementos))
 
     def api(self, que, q):
         if que == 'estado':
@@ -912,6 +1090,8 @@ class Manejador(SimpleHTTPRequestHandler):
         if que == 'lista' and RX_LISTA.match(q.get('id', '')):
             return recordado('lista:' + q['id'], lambda r: 300 if r.get('error') else 6 * 3600,
                              lambda: videos_de_lista(q['id']))
+        if que == 'modelosia':
+            return modelos_ia()
         if que == 'canalhls' and re.match(r'^https?://', q.get('url', ''), re.IGNORECASE):
             return recordado('hls:' + q['url'], 600, lambda: revisar_hls(q['url']))
         if que == 'directo' and RX_CANAL.match(q.get('canal', '')):

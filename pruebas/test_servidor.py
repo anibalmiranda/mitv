@@ -15,6 +15,7 @@ import tempfile
 import threading
 import time
 import unittest
+import urllib.error
 from http.server import ThreadingHTTPServer
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -230,6 +231,51 @@ class BusquedaEnYouTube(unittest.TestCase):
         finally:
             servidor.bajar, servidor.info_video = original_bajar, original_info
             servidor._cache.clear()
+
+    def test_grupos_validos_de_la_ia(self):
+        r = servidor.grupos_validos({'grupos': [
+            {'titulo': 'Lofi', 'items': [1, '3', 3, 99]},
+            {'titulo': '# lofi', 'items': [2]},       # mismo título: se junta
+            {'titulo': 'Vacío', 'items': ['x']},
+            'basura']}, 5)
+        self.assertEqual([g['items'] for g in r], [[1, 3, 2], [4, 5]])
+        self.assertEqual(r[-1]['titulo'], 'Otros')
+
+    def test_zonas_de_chile(self):
+        for texto, zona in [('Marejadas UV || Mejillones', 'Chile norte'), ('Valparaíso EN VIVO', 'Chile centro'),
+                            ('San Pedro de la Paz en Vivo', 'Chile sur'), ('Punta Arenas', 'Chile sur'),
+                            ('Marejadas UV || Rapa Nui', 'Rapa Nui'), ('Almagro', 'Chile'), ('sin pistas', 'Chile')]:
+            self.assertEqual(servidor.zona_chile(texto), zona, texto)
+
+    def test_organizar_con_ia(self):
+        pedidos = []
+        original = servidor.ollama
+        def falso(ruta, datos=None, espera=10):
+            pedidos.append((ruta, datos))
+            return {'message': {'content': json.dumps({'elementos': [
+                {'n': 1, 'tipo': 'musica', 'grupo': 'Jazz'}, {'n': 2, 'tipo': 'lugar', 'pais': 'Japón', 'zona': 'Asia'},
+                {'n': 3, 'tipo': 'lugar', 'pais': 'Chile', 'ciudad': 'Valparaíso'}, {'n': 4, 'tipo': 'musica', 'grupo': 'jazz'}]})}}
+        servidor.ollama = falso
+        try:
+            r = servidor.organizar_con_ia('llama3.1:8b', 'Principal', ['jazz radio [video]', 'Tokio cam [video]', 'Reñaca en vivo [video]',
+                                                                       'acid jazz [video]', 'algo [video]'])
+            # la música primero, luego los lugares (Chile de norte a sur antes que el resto); lo que no se clasificó, al final
+            self.assertEqual(r, {'grupos': [{'titulo': 'Jazz', 'items': [1, 4]}, {'titulo': 'Chile centro', 'items': [3]},
+                                            {'titulo': 'Japón', 'items': [2]}, {'titulo': 'Otros', 'items': [5]}]})
+            ruta, datos = pedidos[0]
+            self.assertEqual(ruta, '/api/chat')
+            self.assertEqual(datos['model'], 'llama3.1:8b')
+            self.assertEqual(datos['format'], 'json')
+            self.assertIn('1. jazz radio [video]\n2. Tokio cam [video]', datos['messages'][1]['content'])
+            servidor.ollama = lambda *a, **k: {'message': {'content': 'no es json'}}
+            self.assertIn('error', servidor.organizar_con_ia('m', 'L', ['a', 'b']))
+            def caido(*a, **k):
+                raise urllib.error.URLError('rechazada')
+            servidor.ollama = caido
+            self.assertIn('Ollama no responde', servidor.organizar_con_ia('m', 'L', ['a', 'b'])['error'])
+            self.assertIn('Ollama no responde', servidor.modelos_ia()['error'])
+        finally:
+            servidor.ollama = original
 
     def test_videos_de_lista(self):
         pagina = ('{"lockupViewModel":{"contentId":"AAAAAAAAAAA","contentType":"LOCKUP_CONTENT_TYPE_VIDEO"}}'

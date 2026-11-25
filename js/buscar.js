@@ -87,7 +87,37 @@ function urlOriginal(linea) {
 }
 
 // ---------- Ventana ----------
+// 🔍 de arriba (o la tecla /): la misma búsqueda, sin un cuadro de partida; lo elegido se agrega a la lista que elijas
+let buscarGlobal = false;
+function modoBuscar(global) {
+  buscarGlobal = global;
+  $('tituloBuscar').textContent = global ? '🔍 Buscar en YouTube' : '🔍 Buscar parecido en YouTube';
+  $('buscarOriginal').hidden = global;
+  $('buscarDestino').hidden = !global;
+  $('btnBuscarDirecto').hidden = global;
+  $('btnBuscarReemplazar').hidden = global;
+  $('btnBuscarAgregar').title = global ? 'Agrega la URL al final de la lista elegida arriba'
+                                       : 'Deja este video y agrega el nuevo justo después, en la lista que estás viendo';
+}
+function abrirBuscarGlobal() {
+  modoBuscar(true);
+  celdaBuscar = null;
+  const sel = $('buscarLista');
+  sel.innerHTML = '';
+  Object.keys(config.listas).forEach(n => sel.appendChild(new Option(n, n)));
+  sel.value = config.actual;
+  $('buscarNuevaUrl').value = '';
+  $('avisoBuscar').textContent = '';
+  $('avisoBuscar').classList.remove('ok');
+  $('buscarCanalBloque').hidden = true;
+  canalN++;
+  if (!$('buscarTexto').value.trim()) $('buscarResultados').innerHTML = '';
+  fondoBuscar.classList.add('abierto');
+  setTimeout(() => { $('buscarTexto').focus(); $('buscarTexto').select(); }, 50);
+}
+
 function abrirBuscar(celda) {
+  modoBuscar(false);
   celdaBuscar = celda;
   const d = datosBusqueda(celda);
   const orig = $('buscarOriginal');
@@ -118,6 +148,7 @@ function abrirBuscar(celda) {
 function cerrarBuscar() {
   fondoBuscar.classList.remove('abierto');
   celdaBuscar = null;
+  buscarGlobal = false;
   busquedaN++;   // si quedó una búsqueda en curso, su respuesta ya no se muestra
   canalN++;
 }
@@ -190,7 +221,7 @@ async function buscarAqui() {
     av.textContent = 'No se pudo buscar aquí: ' + textoError(e) + '. Usa "ver más en YouTube ↗".';
     return;
   }
-  if (n !== busquedaN || !celdaBuscar) return;
+  if (n !== busquedaN || (!celdaBuscar && !buscarGlobal)) return;
   pintarResultados(d.resultados || [], vivo);
 }
 // cont: dónde (la búsqueda o los directos del canal); op.autor: el canal si el resultado no lo trae; op.vacio: aviso sin resultados
@@ -199,7 +230,8 @@ function pintarResultados(lista, vivo, cont, op) {
   op = op || {};
   if (!lista.length) { avisoEnCaja(op.vacio || ('No encontré nada' + (vivo ? ' transmitiendo en vivo' : '') + '. Prueba con otras palabras.'), cont); return; }
   cont.innerHTML = '';
-  const kActual = clave(celdaBuscar.dataset.linea);
+  const kActual = celdaBuscar ? clave(celdaBuscar.dataset.linea) : null;
+  const enDestino = buscarGlobal ? new Set((config.listas[$('buscarLista').value] || []).map(clave).filter(Boolean)) : new Set();
   lista.forEach(v => {
     const url = 'https://www.youtube.com/watch?v=' + v.id;
     const it = document.createElement('button');
@@ -214,6 +246,7 @@ function pintarResultados(lista, vivo, cont, op) {
     th.appendChild(img);
     if (v.vivo) { const b = document.createElement('span'); b.className = 'etq-vivo'; b.textContent = 'EN VIVO'; th.appendChild(b); }
     if (clave(url) === kActual) { const b = document.createElement('span'); b.className = 'es-actual'; b.textContent = 'el que tienes'; th.appendChild(b); }
+    else if (enDestino.has(clave(url))) { const b = document.createElement('span'); b.className = 'es-actual'; b.textContent = 'ya está en la lista'; th.appendChild(b); }
     const t = document.createElement('div');
     t.className = 't';
     t.textContent = v.titulo;
@@ -237,12 +270,13 @@ function pintarResultados(lista, vivo, cont, op) {
       it.classList.add('elegido');
       $('buscarNuevaUrl').value = url;
       av.classList.add('ok');
-      av.textContent = 'Elegido: ' + v.titulo + '. Ahora Reemplazar o + Agregar a la lista.';
-      copiarTexto(url).then(ok => { if (ok && it.classList.contains('elegido')) av.textContent = '📋 URL copiada: ' + v.titulo + '. Ahora Reemplazar o + Agregar a la lista.'; });
+      const sigue = buscarGlobal ? '. Ahora + Agregar a la lista (o doble clic).' : '. Ahora Reemplazar o + Agregar a la lista.';
+      av.textContent = 'Elegido: ' + v.titulo + sigue;
+      copiarTexto(url).then(ok => { if (ok && it.classList.contains('elegido')) av.textContent = '📋 URL copiada: ' + v.titulo + sigue; });
       return true;
     };
     it.addEventListener('click', elegir);
-    it.addEventListener('dblclick', () => { if (elegir()) reemplazarUrl(); });
+    it.addEventListener('dblclick', () => { if (elegir()) (buscarGlobal ? agregarUrl : reemplazarUrl)(); });
     cont.appendChild(it);
   });
 }
@@ -286,7 +320,7 @@ function reemplazarUrl() {
   }
   const cambios = reemplazarEnConfig(vieja, nueva);
   // La vista actual se reescribe además según el orden que tiene en pantalla
-  fijarFuente(celdas.map(c => c === celdaBuscar ? nueva : c.dataset.linea).concat(comentarios));
+  fijarFuente(conComentarios(celdas.map(c => c === celdaBuscar ? nueva : c.dataset.linea), l => l === nueva ? kVieja : (clave(l) || l)));
   guardar();
   cerrarBuscar();
   render(true);
@@ -297,6 +331,7 @@ function reemplazarUrl() {
 // Agrega la URL nueva justo después del video actual, en la lista que se está viendo (el original se mantiene).
 // En la vista de favoritos la agrega a favoritos, si queda cupo.
 function agregarUrl() {
+  if (buscarGlobal) { agregarAListaElegida(); return; }
   if (!celdaBuscar) return;
   const nueva = $('buscarNuevaUrl').value.trim();
   const p = parsear(nueva);
@@ -308,7 +343,7 @@ function agregarUrl() {
   if (config.vistaFav && cantFavs() >= MAX_FAV) { av.textContent = 'Favoritos está lleno (máximo ' + MAX_FAV + '): quita uno o usa Reemplazar.'; return; }
   const orden = celdas.map(c => c.dataset.linea);
   orden.splice(celdas.indexOf(celdaBuscar) + 1, 0, nueva);
-  fijarFuente(orden.concat(comentarios));
+  fijarFuente(conComentarios(orden));
   guardar();
   const destino = config.vistaFav ? 'favoritos' : 'la lista "' + config.actual + '"';
   cerrarBuscar();
@@ -317,6 +352,29 @@ function agregarUrl() {
   mostrarMensaje('➕ Agregado a ' + destino + ', justo después del original');
 }
 
+// Búsqueda global: al final de la lista elegida (sin repetir). La ventana queda abierta para seguir agregando.
+function agregarAListaElegida() {
+  const nueva = $('buscarNuevaUrl').value.trim();
+  const p = parsear(nueva);
+  const av = $('avisoBuscar');
+  av.classList.remove('ok');
+  if (!p || p.tipo === 'error') { av.textContent = 'Esa URL no la reconozco: elige un resultado o pega una URL.'; return; }
+  const nombre = $('buscarLista').value;
+  const lista = config.listas[nombre];
+  if (!lista) return;
+  if (lista.some(l => clave(l) === clave(nueva))) { av.textContent = 'Ya está en la lista "' + nombre + '".'; return; }
+  lista.push(nueva);
+  guardar();
+  if (nombre === config.actual && !config.vistaFav) render(true);
+  pintarSelector();
+  av.classList.add('ok');
+  av.textContent = '➕ Agregado al final de "' + nombre + '". Puedes seguir buscando o agregando.';
+  $('panelBuscar').querySelectorAll('.resultado.elegido .thumb').forEach(th => {
+    if (!th.querySelector('.es-actual')) { const b = document.createElement('span'); b.className = 'es-actual'; b.textContent = 'ya está en la lista'; th.appendChild(b); }
+  });
+}
+
+$('btnBuscarGlobal').addEventListener('click', abrirBuscarGlobal);
 $('btnBuscarYT').addEventListener('click', buscarAqui);
 $('buscarAbrirYT').addEventListener('click', e => { e.preventDefault(); buscarEnYouTube(); });
 $('buscarSoloVivo').addEventListener('change', () => { if ($('buscarTexto').value.trim()) buscarAqui(); });
@@ -325,4 +383,5 @@ $('btnBuscarAgregar').addEventListener('click', agregarUrl);
 $('btnBuscarCerrar').addEventListener('click', cerrarBuscar);
 fondoBuscar.addEventListener('click', e => { if (e.target === fondoBuscar) cerrarBuscar(); });
 $('buscarTexto').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); buscarAqui(); } });
-$('buscarNuevaUrl').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); reemplazarUrl(); } });
+$('buscarNuevaUrl').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); (buscarGlobal ? agregarUrl : reemplazarUrl)(); } });
+$('buscarLista').addEventListener('change', () => { if ($('buscarResultados').querySelector('.resultado')) buscarAqui(); });
