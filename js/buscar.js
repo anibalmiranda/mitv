@@ -268,27 +268,26 @@ function pintarResultados(lista, vivo, cont, op) {
         av.textContent = 'El dueño de ese video no permite verlo fuera de YouTube: elige otro.';
         return false;
       }
-      // Búsqueda global: se pueden marcar varios (clic marca / desmarca) y + Agregar los suma todos
-      if (buscarGlobal) {
-        if (dobleClic !== true) it.classList.toggle('elegido');
-        else it.classList.add('elegido');
-        const n = $('panelBuscar').querySelectorAll('.resultado.elegido').length;
-        av.classList.toggle('ok', n > 0);
-        av.textContent = n ? '✔ ' + n + ' elegido(s). Marca más o aprieta + Agregar a la lista (o doble clic).' : '';
-        if (it.classList.contains('elegido')) copiarTexto(url);
-        return true;
-      }
-      $('panelBuscar').querySelectorAll('.resultado.elegido').forEach(x => x.classList.remove('elegido'));
-      it.classList.add('elegido');
-      $('buscarNuevaUrl').value = url;
-      av.classList.add('ok');
-      const sigue = buscarGlobal ? '. Ahora + Agregar a la lista (o doble clic).' : '. Ahora Reemplazar o + Agregar a la lista.';
-      av.textContent = 'Elegido: ' + v.titulo + sigue;
-      copiarTexto(url).then(ok => { if (ok && it.classList.contains('elegido')) av.textContent = '📋 URL copiada: ' + v.titulo + sigue; });
+      // Clic marca / desmarca (se pueden marcar varios); + Agregar los suma todos. Reemplazar usa uno solo.
+      if (dobleClic !== true) it.classList.toggle('elegido');
+      else it.classList.add('elegido');
+      const n = marcados().length;
+      av.classList.toggle('ok', n > 0);
+      av.textContent = !n ? '' : n === 1 && !buscarGlobal
+        ? '✔ Elegido: ' + v.titulo + '. Marca más para agregar varios, o Reemplazar / + Agregar a la lista.'
+        : '✔ ' + n + ' elegido(s). Marca más o aprieta + Agregar a la lista' + (buscarGlobal ? ' (o doble clic).' : ' (Reemplazar es con uno solo).');
+      if (it.classList.contains('elegido')) copiarTexto(url);
       return true;
     };
     it.addEventListener('click', () => elegir());
-    it.addEventListener('dblclick', () => { if (elegir(true)) (buscarGlobal ? agregarUrl : reemplazarUrl)(); });
+    it.addEventListener('dblclick', () => {
+      if (buscarGlobal) { if (elegir(true)) agregarUrl(); return; }
+      // doble clic en un cuadro: reemplaza con ese (solo ese)
+      if (v.incrustable === false) { elegir(); return; }
+      cont.closest('#panelBuscar').querySelectorAll('.resultado.elegido').forEach(x => x.classList.remove('elegido'));
+      it.classList.add('elegido');
+      reemplazarUrl();
+    });
     cont.appendChild(it);
   });
 }
@@ -313,10 +312,17 @@ function reemplazarEnConfig(vieja, nueva) {
   return cambios;
 }
 
-// Reemplaza la URL vieja por la nueva en todas las listas y favoritos
+function marcados() { return [...$('panelBuscar').querySelectorAll('.resultado.elegido')].map(x => x.dataset.url); }
+// Reemplaza la URL vieja por la nueva (la marcada o la pegada; una sola) en todas las listas y favoritos
 function reemplazarUrl() {
   if (!celdaBuscar) return;
-  const nueva = $('buscarNuevaUrl').value.trim();
+  const pegada = $('buscarNuevaUrl').value.trim(), m = marcados();
+  if (m.length + (pegada ? 1 : 0) > 1) {
+    $('avisoBuscar').classList.remove('ok');
+    $('avisoBuscar').textContent = 'Para reemplazar elige uno solo (con varios marcados usa + Agregar a la lista).';
+    return;
+  }
+  const nueva = pegada || m[0] || '';
   const p = parsear(nueva);
   if (!p || p.tipo === 'error') {
     $('avisoBuscar').classList.remove('ok');
@@ -332,7 +338,7 @@ function reemplazarUrl() {
   }
   const cambios = reemplazarEnConfig(vieja, nueva);
   // La vista actual se reescribe además según el orden que tiene en pantalla
-  fijarFuente(conComentarios(celdas.map(c => c === celdaBuscar ? nueva : c.dataset.linea), l => l === nueva ? kVieja : (clave(l) || l)));
+  fijarFuente(conComentarios(celdas.map(c => clave(c.dataset.linea) === kVieja ? nueva : c.dataset.linea), l => l === nueva ? kVieja : (clave(l) || l)));
   guardar();
   cerrarBuscar();
   render(true);
@@ -340,63 +346,73 @@ function reemplazarUrl() {
   mostrarMensaje('🔁 URL reemplazada' + (cambios > 1 ? ' en ' + cambios + ' lugares (listas y favoritos)' : ''));
 }
 
-// Agrega la URL nueva justo después del video actual, en la lista que se está viendo (el original se mantiene).
-// En la vista de favoritos la agrega a favoritos, si queda cupo.
-function agregarUrl() {
-  if (buscarGlobal) { agregarAListaElegida(); return; }
-  if (!celdaBuscar) return;
-  const nueva = $('buscarNuevaUrl').value.trim();
-  const p = parsear(nueva);
-  const av = $('avisoBuscar');
-  av.classList.remove('ok');
-  if (!p || p.tipo === 'error') { av.textContent = 'Esa URL no es de YouTube o no la reconozco.'; return; }
-  const kNueva = clave(nueva);
-  if (celdas.some(c => clave(c.dataset.linea) === kNueva)) { av.textContent = 'Ese video ya está en esta lista.'; return; }
-  if (config.vistaFav && cantFavs() >= MAX_FAV) { av.textContent = 'Favoritos está lleno (máximo ' + MAX_FAV + '): quita uno o usa Reemplazar.'; return; }
-  const orden = celdas.map(c => c.dataset.linea);
-  orden.splice(celdas.indexOf(celdaBuscar) + 1, 0, nueva);
-  fijarFuente(conComentarios(orden));
-  guardar();
-  const destino = config.vistaFav ? 'favoritos' : 'la lista "' + config.actual + '"';
-  cerrarBuscar();
-  render(true);
-  pintarSelector();
-  mostrarMensaje('➕ Agregado a ' + destino + ', justo después del original');
-}
-
-// Búsqueda global: al final de la lista elegida (sin repetir) y se cierra la ventana; para otro, se vuelve a abrir
-// (🔍 o /) y queda la última búsqueda con sus resultados.
-function agregarAListaElegida() {
-  const av = $('avisoBuscar');
-  av.classList.remove('ok');
-  const marcados = [...$('panelBuscar').querySelectorAll('.resultado.elegido')].map(x => x.dataset.url);
+// Lo marcado (y la URL pegada abajo) para agregar: { urls } o { error }
+function paraAgregar() {
+  const urls = marcados();
   const pegada = $('buscarNuevaUrl').value.trim();
   if (pegada) {
     const p = parsear(pegada);
-    if (!p || p.tipo === 'error') { av.textContent = 'La URL pegada no la reconozco.'; return; }
-    marcados.push(pegada);
+    if (!p || p.tipo === 'error') return { error: 'La URL pegada no la reconozco.' };
+    urls.push(pegada);
   }
-  if (!marcados.length) { av.textContent = 'Marca uno o más resultados (clic) o pega una URL.'; return; }
+  return urls.length ? { urls } : { error: 'Marca uno o más resultados (clic) o pega una URL.' };
+}
+// Después de agregar, la ventana queda abierta para seguir agregando: lo agregado queda marcado "ya está en la lista"
+function agregados(texto) {
+  $('panelBuscar').querySelectorAll('.resultado.elegido').forEach(it => {
+    const th = it.querySelector('.thumb');
+    if (th && !th.querySelector('.es-actual')) { const b = document.createElement('span'); b.className = 'es-actual'; b.textContent = 'ya está en la lista'; th.appendChild(b); }
+    it.classList.remove('elegido');
+  });
+  $('buscarNuevaUrl').value = '';
+  const av = $('avisoBuscar');
+  av.classList.add('ok');
+  av.textContent = texto + ' Puedes seguir marcando y agregando; Cerrar cuando termines.';
+}
+const textoRepetidos = r => r ? ' (' + r + ' ya estaba' + (r > 1 ? 'n' : '') + ')' : '';
+
+// Desde el 🔍 de un cuadro: justo después del original, en la lista que se está viendo (o en favoritos, si queda cupo)
+function agregarUrl() {
+  if (buscarGlobal) { agregarAListaElegida(); return; }
+  if (!celdaBuscar) return;
+  const av = $('avisoBuscar');
+  av.classList.remove('ok');
+  const sel = paraAgregar();
+  if (sel.error) { av.textContent = sel.error; return; }
+  const nuevas = [];
+  sel.urls.forEach(u => { if (![...celdas.map(c => c.dataset.linea), ...nuevas].some(l => clave(l) === clave(u))) nuevas.push(u); });
+  if (!nuevas.length) { av.textContent = (sel.urls.length > 1 ? 'Ya están todos' : 'Ya está') + ' en esta lista.'; return; }
+  if (config.vistaFav && cantFavs() + nuevas.length > MAX_FAV) { av.textContent = 'No caben en favoritos (máximo ' + MAX_FAV + '): quita alguno o usa Reemplazar.'; return; }
+  const kOrig = clave(celdaBuscar.dataset.linea);
+  const orden = celdas.map(c => c.dataset.linea);
+  const i = orden.findIndex(l => clave(l) === kOrig);
+  orden.splice(i >= 0 ? i + 1 : orden.length, 0, ...nuevas);
+  fijarFuente(conComentarios(orden));
+  guardar();
+  render(true);
+  pintarSelector();
+  const destino = config.vistaFav ? 'favoritos' : '"' + config.actual + '"';
+  agregados('➕ ' + (nuevas.length > 1 ? nuevas.length + ' agregados' : 'Agregado') + ' a ' + destino + ', después del original' + textoRepetidos(sel.urls.length - nuevas.length) + '.');
+}
+
+// Búsqueda global (🔍 de arriba o /): al final de la lista elegida, sin repetir
+function agregarAListaElegida() {
+  const av = $('avisoBuscar');
+  av.classList.remove('ok');
+  const sel = paraAgregar();
+  if (sel.error) { av.textContent = sel.error; return; }
   const nombre = $('buscarLista').value;
   const lista = config.listas[nombre];
   if (!lista) return;
   const nuevas = [];
-  marcados.forEach(u => { if (![...lista, ...nuevas].some(l => clave(l) === clave(u))) nuevas.push(u); });
-  if (!nuevas.length) { av.textContent = (marcados.length > 1 ? 'Ya están todos' : 'Ya está') + ' en la lista "' + nombre + '".'; return; }
+  sel.urls.forEach(u => { if (![...lista, ...nuevas].some(l => clave(l) === clave(u))) nuevas.push(u); });
+  if (!nuevas.length) { av.textContent = (sel.urls.length > 1 ? 'Ya están todos' : 'Ya está') + ' en la lista "' + nombre + '".'; return; }
   lista.push(...nuevas);
   ultimaListaBuscar = nombre;
-  $('buscarNuevaUrl').value = '';
   guardar();
   if (nombre === config.actual && !config.vistaFav) render(true);
   pintarSelector();
-  $('panelBuscar').querySelectorAll('.resultado.elegido .thumb').forEach(th => {
-    if (!th.querySelector('.es-actual')) { const b = document.createElement('span'); b.className = 'es-actual'; b.textContent = 'ya está en la lista'; th.appendChild(b); }
-  });
-  $('panelBuscar').querySelectorAll('.resultado.elegido').forEach(x => x.classList.remove('elegido'));
-  cerrarBuscar();
-  const repetidos = marcados.length - nuevas.length;
-  mostrarMensaje('➕ ' + (nuevas.length > 1 ? nuevas.length + ' agregados' : 'Agregado') + ' al final de "' + nombre + '"' +
-                 (repetidos ? ' (' + repetidos + ' ya estaba' + (repetidos > 1 ? 'n' : '') + ')' : '') + ' · 🔍 o / para agregar más');
+  agregados('➕ ' + (nuevas.length > 1 ? nuevas.length + ' agregados' : 'Agregado') + ' al final de "' + nombre + '"' + textoRepetidos(sel.urls.length - nuevas.length) + '.');
 }
 
 $('btnBuscarGlobal').addEventListener('click', abrirBuscarGlobal);

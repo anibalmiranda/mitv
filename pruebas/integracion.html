@@ -243,9 +243,9 @@ prueba('carrusel también con un canal ampliado (sin pantalla completa)', async 
 });
 prueba('🔍 buscar parecido: resultados como miniaturas, en vivo y con el permiso del dueño', async () => {
   const R = [
-    { id: 'aaaaaaaaaaa', titulo: 'Noticias en vivo', canal: 'Canal A', vivo: true, detalle: '997 lo están viendo', incrustable: true, miniatura: 'about:blank' },
+    { id: 'raaaaaaaaaa', titulo: 'Noticias en vivo', canal: 'Canal A', vivo: true, detalle: '997 lo están viendo', incrustable: true, miniatura: 'about:blank' },
     { id: 'bbbbbbbbbbb', titulo: 'Bloqueado', canal: 'Canal B', vivo: true, detalle: '', incrustable: false, miniatura: 'about:blank' },
-    { id: 'ccccccccccc', titulo: 'Sin saber', canal: 'Canal C', vivo: false, detalle: '', incrustable: null, miniatura: 'about:blank' }];
+    { id: 'rcccccccccc', titulo: 'Sin saber', canal: 'Canal C', vivo: false, detalle: '', incrustable: null, miniatura: 'about:blank' }];
   w.eval('window._apiOrig = api; window._pedidos = []; api = async (que, p) => { _pedidos.push([que, p]); return { resultados: ' + JSON.stringify(R) + ' }; }');
   try {
     w.abrirBuscar(c()[0]); await espera(100);
@@ -258,9 +258,24 @@ prueba('🔍 buscar parecido: resultados como miniaturas, en vivo y con el permi
     igual(res.map(x => [...x.querySelector('.permiso').textContent][0]), ['✅', '🔒', '❔'], 'permiso del dueño');
     res[1].click();
     igual(d.getElementById('buscarNuevaUrl').value, '', 'el bloqueado no se puede elegir');
+    igual(res[1].classList.contains('elegido'), false, 'el bloqueado no se puede marcar');
     res[0].click();
-    igual(d.getElementById('buscarNuevaUrl').value, 'https://www.youtube.com/watch?v=aaaaaaaaaaa', 'el elegido queda listo para reemplazar');
-    cierto(res[0].classList.contains('elegido'));
+    cierto(res[0].classList.contains('elegido'), 'el elegido queda marcado');
+    res[2].click();
+    igual(w.marcados(), ['https://www.youtube.com/watch?v=raaaaaaaaaa', 'https://www.youtube.com/watch?v=rcccccccccc'], 'se marcan varios');
+    d.getElementById('btnBuscarReemplazar').click();
+    cierto(/uno solo/.test(d.getElementById('avisoBuscar').textContent), 'Reemplazar pide uno solo');
+    const antes = w.eval('fuente()').filter(l => w.parsear(l)).length, orig = c()[0].dataset.linea;
+    d.getElementById('btnBuscarAgregar').click(); await espera(50);
+    const ahora = w.eval('fuente()').filter(l => w.parsear(l));
+    igual(ahora.length, antes + 2, 'agrega los dos · ' + d.getElementById('avisoBuscar').textContent);
+    igual(ahora.slice(ahora.indexOf(orig) + 1, ahora.indexOf(orig) + 3),
+          ['https://www.youtube.com/watch?v=raaaaaaaaaa', 'https://www.youtube.com/watch?v=rcccccccccc'], 'justo después del original');
+    cierto(d.getElementById('fondoBuscar').classList.contains('abierto'), 'la ventana sigue abierta para agregar más');
+    igual(w.marcados(), [], 'se desmarcan');
+    igual(res[0].querySelector('.es-actual').textContent, 'ya está en la lista');
+    w.eval('config.listas[config.actual] = config.listas[config.actual].filter(l => !/raaaaaaaaaa|rcccccccccc/.test(l))');
+    w.render(true);
     d.getElementById('buscarSoloVivo').checked = true;
     d.getElementById('buscarSoloVivo').dispatchEvent(new w.Event('change')); await espera(50);
     igual(w._pedidos[w._pedidos.length - 1][1].vivo, '1', '"Solo en vivo" vuelve a buscar con el filtro');
@@ -298,15 +313,14 @@ prueba('🔍 de arriba (tecla /): la misma búsqueda, y lo elegido se agrega al 
     d.getElementById('btnBuscarAgregar').click();
     igual(w.eval('config.listas["Destino"]'), ['https://www.youtube.com/watch?v=gggggggggg1', 'https://www.youtube.com/watch?v=gggggggggg4',
           'https://www.youtube.com/watch?v=gggggggggg5', 'https://youtu.be/gggggggggg3'], 'los marcados y la pegada, al final de la lista elegida');
-    cierto(!d.getElementById('fondoBuscar').classList.contains('abierto'), 'al agregar se cierra');
-    tecla('/');
-    igual(d.getElementById('buscarLista').value, 'Destino', 'al volver a abrir sigue elegida la misma lista');
-    igual(d.querySelectorAll('#buscarResultados .resultado').length, 4, 'y siguen los resultados de la búsqueda');
-    igual(d.querySelectorAll('#buscarResultados .resultado.elegido').length, 0, 'sin marcas');
+    cierto(d.getElementById('fondoBuscar').classList.contains('abierto'), 'la ventana sigue abierta para agregar más');
+    igual(d.querySelectorAll('#buscarResultados .resultado.elegido').length, 0, 'se desmarcan');
     d.getElementById('buscarNuevaUrl').value = 'https://youtu.be/gggggggggg3';
     d.getElementById('btnBuscarAgregar').click();
     igual(w.eval('config.listas["Destino"]').length, 4, 'no la repite');
-    cierto(d.getElementById('fondoBuscar').classList.contains('abierto'), 'si ya estaba, avisa y no se cierra');
+    w.cerrarBuscar();
+    tecla('/');
+    igual(d.getElementById('buscarLista').value, 'Destino', 'al volver a abrir sigue elegida la misma lista');
     w.cerrarBuscar();
     w.abrirBuscar(c()[0]);
     cierto(!d.getElementById('btnBuscarReemplazar').hidden && d.getElementById('buscarDestino').hidden, 'el 🔍 de un cuadro sigue igual que antes');
@@ -362,7 +376,7 @@ prueba('🔍 buscar en un directo: arriba, todo lo que su canal transmite en viv
     cierto(/Ledrium/.test(arriba[0].querySelector('.a').textContent), 'con el nombre del canal');
     igual(d.querySelectorAll('#buscarResultados .resultado').length, 1, 'y abajo la búsqueda (aunque se repita)');
     arriba[1].click(); await espera(50);
-    igual(d.getElementById('buscarNuevaUrl').value, 'https://www.youtube.com/watch?v=eeeeeeeeeee', 'clic: su URL queda lista');
+    igual(w.marcados(), ['https://www.youtube.com/watch?v=eeeeeeeeeee'], 'clic: queda marcado (su URL lista)');
     // Un video que no es directo no muestra la sección
     w.cerrarBuscar();
     w.eval('config.nombres[' + JSON.stringify(k) + '] = { titulo: "Video", autor: "X", vivo: false }');
