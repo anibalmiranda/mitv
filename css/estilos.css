@@ -822,3 +822,8 @@ body.modo-audio .celda .compartir { display: none; }
 .celda.max .maximizar { display: none; }
 .celda.max .quitar { right: 38px; }
 .celda .quitar { font-size: 13px; }
+
+/* ⚙: la ayuda (qué URLs se aceptan y atajos) va plegada; se abre con su título */
+#ayudaPanel summary { cursor: pointer; font-size: 13px; color: var(--suave); user-select: none; }
+#ayudaPanel summary:hover { color: var(--texto); }
+#ayudaPanel[open] summary { margin-bottom: 6px; }
