@@ -420,6 +420,8 @@ button.btn { border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; 
 /* Resultados de la búsqueda (hasta 6 miniaturas, buscar.js) */
 .resultados { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .resultados:empty { display: none; }
+/* Hasta 25 resultados: se desplazan solos y los botones de abajo quedan a la vista */
+#buscarResultados { grid-template-columns: repeat(4, 1fr); max-height: 48vh; overflow-y: auto; padding-right: 4px; flex-shrink: 0; }
 .buscar-seccion { font-size: 13px; font-weight: 600; margin: 4px 0 6px; color: var(--texto); }
 #buscarCanalBloque { margin-bottom: 4px; }
 .resultados .buscando { grid-column: 1 / -1; font-size: 13px; color: var(--suave); padding: 10px 2px; }
@@ -440,7 +442,7 @@ button.btn { border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; 
 .resultado .a { font-size: 11px; color: var(--suave); padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .resultado .permiso { font-size: 11px; padding: 4px 8px 7px; color: #9be7a6; }
 .resultado.bloqueado .permiso { color: #ffb4b4; }
-@media (max-width: 560px) { .resultados { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .resultados, #buscarResultados { grid-template-columns: repeat(2, 1fr); } }
 #avisoBuscar.ok { color: #9be7a6; }
 
 /* Cámaras IP (stream MJPEG): sin audio, sin buscar parecido; la capa de clic cubre todo (no hay controles de YouTube) */

@@ -89,6 +89,7 @@ function urlOriginal(linea) {
 // ---------- Ventana ----------
 // 🔍 de arriba (o la tecla /): la misma búsqueda, sin un cuadro de partida; lo elegido se agrega a la lista que elijas
 let buscarGlobal = false;
+let ultimaListaBuscar = '';   // a la que se agregó la última vez: al volver a abrir sigue elegida
 function modoBuscar(global) {
   buscarGlobal = global;
   $('tituloBuscar').textContent = global ? '🔍 Buscar en YouTube' : '🔍 Buscar parecido en YouTube';
@@ -105,7 +106,7 @@ function abrirBuscarGlobal() {
   const sel = $('buscarLista');
   sel.innerHTML = '';
   Object.keys(config.listas).forEach(n => sel.appendChild(new Option(n, n)));
-  sel.value = config.actual;
+  sel.value = config.listas[ultimaListaBuscar] ? ultimaListaBuscar : config.actual;
   $('buscarNuevaUrl').value = '';
   $('avisoBuscar').textContent = '';
   $('avisoBuscar').classList.remove('ok');
@@ -193,7 +194,7 @@ function buscarEnYouTube() {
 }
 
 // ---------- Búsqueda aquí mismo (servidor.py) ----------
-// Muestra los primeros 6 resultados como miniaturas, con EN VIVO y si el dueño permite verlo fuera de YouTube.
+// Muestra los primeros 25 resultados como miniaturas, con EN VIVO y si el dueño permite verlo fuera de YouTube.
 // Un clic lo elige (queda su URL abajo), doble clic lo reemplaza al tiro. Los bloqueados no se pueden elegir.
 let busquedaN = 0;
 function avisoEnCaja(texto, cont) {
@@ -259,12 +260,23 @@ function pintarResultados(lista, vivo, cont, op) {
                                                                      : '❔ No se pudo revisar el permiso';
     it.append(th, t, a, perm);
     it.title = v.titulo + (v.canal ? ' — ' + v.canal : '');
-    const elegir = () => {
+    it.dataset.url = url;
+    const elegir = (dobleClic) => {
       const av = $('avisoBuscar');
       if (v.incrustable === false) {
         av.classList.remove('ok');
         av.textContent = 'El dueño de ese video no permite verlo fuera de YouTube: elige otro.';
         return false;
+      }
+      // Búsqueda global: se pueden marcar varios (clic marca / desmarca) y + Agregar los suma todos
+      if (buscarGlobal) {
+        if (dobleClic !== true) it.classList.toggle('elegido');
+        else it.classList.add('elegido');
+        const n = $('panelBuscar').querySelectorAll('.resultado.elegido').length;
+        av.classList.toggle('ok', n > 0);
+        av.textContent = n ? '✔ ' + n + ' elegido(s). Marca más o aprieta + Agregar a la lista (o doble clic).' : '';
+        if (it.classList.contains('elegido')) copiarTexto(url);
+        return true;
       }
       $('panelBuscar').querySelectorAll('.resultado.elegido').forEach(x => x.classList.remove('elegido'));
       it.classList.add('elegido');
@@ -275,8 +287,8 @@ function pintarResultados(lista, vivo, cont, op) {
       copiarTexto(url).then(ok => { if (ok && it.classList.contains('elegido')) av.textContent = '📋 URL copiada: ' + v.titulo + sigue; });
       return true;
     };
-    it.addEventListener('click', elegir);
-    it.addEventListener('dblclick', () => { if (elegir()) (buscarGlobal ? agregarUrl : reemplazarUrl)(); });
+    it.addEventListener('click', () => elegir());
+    it.addEventListener('dblclick', () => { if (elegir(true)) (buscarGlobal ? agregarUrl : reemplazarUrl)(); });
     cont.appendChild(it);
   });
 }
@@ -352,26 +364,39 @@ function agregarUrl() {
   mostrarMensaje('➕ Agregado a ' + destino + ', justo después del original');
 }
 
-// Búsqueda global: al final de la lista elegida (sin repetir). La ventana queda abierta para seguir agregando.
+// Búsqueda global: al final de la lista elegida (sin repetir) y se cierra la ventana; para otro, se vuelve a abrir
+// (🔍 o /) y queda la última búsqueda con sus resultados.
 function agregarAListaElegida() {
-  const nueva = $('buscarNuevaUrl').value.trim();
-  const p = parsear(nueva);
   const av = $('avisoBuscar');
   av.classList.remove('ok');
-  if (!p || p.tipo === 'error') { av.textContent = 'Esa URL no la reconozco: elige un resultado o pega una URL.'; return; }
+  const marcados = [...$('panelBuscar').querySelectorAll('.resultado.elegido')].map(x => x.dataset.url);
+  const pegada = $('buscarNuevaUrl').value.trim();
+  if (pegada) {
+    const p = parsear(pegada);
+    if (!p || p.tipo === 'error') { av.textContent = 'La URL pegada no la reconozco.'; return; }
+    marcados.push(pegada);
+  }
+  if (!marcados.length) { av.textContent = 'Marca uno o más resultados (clic) o pega una URL.'; return; }
   const nombre = $('buscarLista').value;
   const lista = config.listas[nombre];
   if (!lista) return;
-  if (lista.some(l => clave(l) === clave(nueva))) { av.textContent = 'Ya está en la lista "' + nombre + '".'; return; }
-  lista.push(nueva);
+  const nuevas = [];
+  marcados.forEach(u => { if (![...lista, ...nuevas].some(l => clave(l) === clave(u))) nuevas.push(u); });
+  if (!nuevas.length) { av.textContent = (marcados.length > 1 ? 'Ya están todos' : 'Ya está') + ' en la lista "' + nombre + '".'; return; }
+  lista.push(...nuevas);
+  ultimaListaBuscar = nombre;
+  $('buscarNuevaUrl').value = '';
   guardar();
   if (nombre === config.actual && !config.vistaFav) render(true);
   pintarSelector();
-  av.classList.add('ok');
-  av.textContent = '➕ Agregado al final de "' + nombre + '". Puedes seguir buscando o agregando.';
   $('panelBuscar').querySelectorAll('.resultado.elegido .thumb').forEach(th => {
     if (!th.querySelector('.es-actual')) { const b = document.createElement('span'); b.className = 'es-actual'; b.textContent = 'ya está en la lista'; th.appendChild(b); }
   });
+  $('panelBuscar').querySelectorAll('.resultado.elegido').forEach(x => x.classList.remove('elegido'));
+  cerrarBuscar();
+  const repetidos = marcados.length - nuevas.length;
+  mostrarMensaje('➕ ' + (nuevas.length > 1 ? nuevas.length + ' agregados' : 'Agregado') + ' al final de "' + nombre + '"' +
+                 (repetidos ? ' (' + repetidos + ' ya estaba' + (repetidos > 1 ? 'n' : '') + ')' : '') + ' · 🔍 o / para agregar más');
 }
 
 $('btnBuscarGlobal').addEventListener('click', abrirBuscarGlobal);

@@ -272,7 +272,9 @@ prueba('🔍 buscar parecido: resultados como miniaturas, en vivo y con el permi
 prueba('🔍 de arriba (tecla /): la misma búsqueda, y lo elegido se agrega al final de la lista que elijas', async () => {
   const R = [
     { id: 'gggggggggg1', titulo: 'Jazz en vivo', canal: 'Canal J', vivo: true, detalle: '', incrustable: true, miniatura: 'about:blank' },
-    { id: 'gggggggggg2', titulo: 'Bloqueado', canal: 'Canal B', vivo: false, detalle: '', incrustable: false, miniatura: 'about:blank' }];
+    { id: 'gggggggggg2', titulo: 'Bloqueado', canal: 'Canal B', vivo: false, detalle: '', incrustable: false, miniatura: 'about:blank' },
+    { id: 'gggggggggg4', titulo: 'Otro jazz', canal: 'Canal K', vivo: true, detalle: '', incrustable: true, miniatura: 'about:blank' },
+    { id: 'gggggggggg5', titulo: 'Más jazz', canal: 'Canal L', vivo: true, detalle: '', incrustable: true, miniatura: 'about:blank' }];
   w.eval('config.listas["Destino"] = ["https://www.youtube.com/watch?v=gggggggggg1"]');
   w.eval('window._apiOrig = api; window._pedidos = []; api = async (que, p) => { _pedidos.push([que, p]); return { resultados: ' + JSON.stringify(R) + ' }; }');
   try {
@@ -286,14 +288,25 @@ prueba('🔍 de arriba (tecla /): la misma búsqueda, y lo elegido se agrega al 
     d.getElementById('btnBuscarYT').click(); await espera(100);
     igual(w._pedidos[w._pedidos.length - 1], ['buscar', { q: 'jazz', vivo: '0' }]);
     const res = [...d.querySelectorAll('#buscarResultados .resultado')];
-    igual(res.length, 2);
+    igual(res.length, 4);
     igual(res[0].querySelector('.es-actual').textContent, 'ya está en la lista', 'marca lo que ya tienes en esa lista');
+    res[2].click(); res[3].click(); res[1].click();
+    igual(res.map(x => x.classList.contains('elegido')), [false, false, true, true], 'se marcan varios (el bloqueado no)');
+    res[3].click(); res[3].click();
+    cierto(res[3].classList.contains('elegido'), 'clic de nuevo desmarca y vuelve a marcar');
     d.getElementById('buscarNuevaUrl').value = 'https://youtu.be/gggggggggg3';
     d.getElementById('btnBuscarAgregar').click();
-    igual(w.eval('config.listas["Destino"]'), ['https://www.youtube.com/watch?v=gggggggggg1', 'https://youtu.be/gggggggggg3'], 'al final de la lista elegida');
-    cierto(d.getElementById('fondoBuscar').classList.contains('abierto'), 'queda abierta para seguir agregando');
+    igual(w.eval('config.listas["Destino"]'), ['https://www.youtube.com/watch?v=gggggggggg1', 'https://www.youtube.com/watch?v=gggggggggg4',
+          'https://www.youtube.com/watch?v=gggggggggg5', 'https://youtu.be/gggggggggg3'], 'los marcados y la pegada, al final de la lista elegida');
+    cierto(!d.getElementById('fondoBuscar').classList.contains('abierto'), 'al agregar se cierra');
+    tecla('/');
+    igual(d.getElementById('buscarLista').value, 'Destino', 'al volver a abrir sigue elegida la misma lista');
+    igual(d.querySelectorAll('#buscarResultados .resultado').length, 4, 'y siguen los resultados de la búsqueda');
+    igual(d.querySelectorAll('#buscarResultados .resultado.elegido').length, 0, 'sin marcas');
+    d.getElementById('buscarNuevaUrl').value = 'https://youtu.be/gggggggggg3';
     d.getElementById('btnBuscarAgregar').click();
-    igual(w.eval('config.listas["Destino"]').length, 2, 'no la repite');
+    igual(w.eval('config.listas["Destino"]').length, 4, 'no la repite');
+    cierto(d.getElementById('fondoBuscar').classList.contains('abierto'), 'si ya estaba, avisa y no se cierra');
     w.cerrarBuscar();
     w.abrirBuscar(c()[0]);
     cierto(!d.getElementById('btnBuscarReemplazar').hidden && d.getElementById('buscarDestino').hidden, 'el 🔍 de un cuadro sigue igual que antes');

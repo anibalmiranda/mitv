@@ -213,7 +213,7 @@ def info_video_recordada(vid):
 # Lee la página de resultados (los primeros que muestra YouTube) y de cada uno revisa en su página si el dueño
 # permite verlo fuera de YouTube. YouTube entrega los resultados como "lockupViewModel" (formato nuevo) o como
 # "videoRenderer" (formato anterior): se entienden los dos.
-MAX_RESULTADOS = 6
+MAX_RESULTADOS = 25
 MAX_VIVOS_CANAL = 12
 FILTRO_EN_VIVO = 'EgJAAQ%253D%253D'   # el filtro "En vivo" de YouTube
 
@@ -488,18 +488,42 @@ def organizar_con_ia(modelo, lista, elementos):
     return {'grupos': grupos}
 
 
+def permiso_oembed(vid):
+    # ¿Se puede incrustar? Se pregunta al oEmbed de YouTube (una respuesta chica, no la página completa del video):
+    # 200 = sí, 401 = el dueño no lo permite; otra cosa = no se sabe. Respeta el freno del 429 como las lecturas.
+    if frenado():
+        return None
+    url = 'https://www.youtube.com/oembed?format=json&url=' + urllib.parse.quote('https://www.youtube.com/watch?v=' + vid, safe='')
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=CABECERAS_YT), timeout=10) as r:
+            return r.status == 200
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            with _freno_lock:
+                _freno['hasta'] = time.time() + _freno['espera']
+                _freno['espera'] = min(_freno['espera'] * 2, FRENO_MAXIMO_S)
+            fijar_salud('falla', aviso_freno())
+        return False if e.code == 401 else None
+    except (urllib.error.URLError, OSError):
+        return None
+
+
+def permiso_recordado(vid):
+    with _cache_lock:
+        v = _cache.get('video:' + vid)   # si ya se leyó su página, se sabe
+    if v and time.time() < v[0] and not v[1].get('error'):
+        return v[1].get('incrustable', True)
+    return recordado('permiso:' + vid, lambda r: 600 if r is None else 6 * 3600, lambda: permiso_oembed(vid))
+
+
 def con_permisos(lista):
-    # ¿El dueño permite verlo fuera de YouTube? (de a 3 a la vez; si YouTube no responde, queda "sin saber")
+    # ¿El dueño permite verlo fuera de YouTube? (de a 4 a la vez; si YouTube no responde, queda "sin saber")
     def revisar(v):
-        try:
-            info = info_video_recordada(v['id'])
-            v['incrustable'] = None if info.get('error') else info.get('incrustable', True)
-        except (urllib.error.URLError, OSError):
-            v['incrustable'] = None
+        v['incrustable'] = permiso_recordado(v['id'])
         v['miniatura'] = 'https://i.ytimg.com/vi/' + v['id'] + '/mqdefault.jpg'
     hilos = []
     for v in lista:
-        while sum(h.is_alive() for h in hilos) >= 3:
+        while sum(h.is_alive() for h in hilos) >= 4:
             time.sleep(0.05)
         h = threading.Thread(target=revisar, args=(v,), daemon=True)
         h.start()

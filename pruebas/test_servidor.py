@@ -16,6 +16,7 @@ import threading
 import time
 import unittest
 import urllib.error
+import urllib.request
 from http.server import ThreadingHTTPServer
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -198,9 +199,9 @@ class BusquedaEnYouTube(unittest.TestCase):
         def bajar(url):
             pedidas.append(url)
             return self.pagina()
-        original_bajar, original_info = servidor.bajar, servidor.info_video
+        original_bajar, original_info = servidor.bajar, servidor.permiso_oembed
         servidor.bajar = bajar
-        servidor.info_video = lambda vid: {'incrustable': vid != 'h5efji0_wtQ'}
+        servidor.permiso_oembed = lambda vid: vid != 'h5efji0_wtQ'
         servidor._cache.clear()
         try:
             r = servidor.buscar_youtube('teletrece en vivo', True)['resultados']
@@ -211,7 +212,35 @@ class BusquedaEnYouTube(unittest.TestCase):
             todos = servidor.buscar_youtube('teletrece', False)['resultados']
             self.assertEqual([v['incrustable'] for v in todos], [False, True])
         finally:
-            servidor.bajar, servidor.info_video = original_bajar, original_info
+            servidor.bajar, servidor.permiso_oembed = original_bajar, original_info
+            servidor._cache.clear()
+
+    def test_permiso_por_oembed(self):
+        class Resp:
+            status = 200
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        pedidas, original, codigo = [], urllib.request.urlopen, {'c': 200}
+        def falso(req, timeout=None):
+            pedidas.append(req.full_url)
+            if codigo['c'] != 200:
+                raise urllib.error.HTTPError(req.full_url, codigo['c'], 'x', None, None)
+            return Resp()
+        urllib.request.urlopen = falso
+        servidor._cache.clear()
+        try:
+            self.assertIs(servidor.permiso_oembed('aaaaaaaaaaa'), True)
+            self.assertIn('youtube.com/oembed', pedidas[0])
+            codigo['c'] = 401
+            self.assertIs(servidor.permiso_oembed('aaaaaaaaaaa'), False, '401: el dueño no permite incrustarlo')
+            codigo['c'] = 404
+            self.assertIsNone(servidor.permiso_oembed('aaaaaaaaaaa'), 'otra respuesta: no se sabe')
+            servidor._cache['video:bbbbbbbbbbb'] = (time.time() + 60, {'incrustable': False})
+            n = len(pedidas)
+            self.assertIs(servidor.permiso_recordado('bbbbbbbbbbb'), False, 'si ya se leyó su página no se pregunta')
+            self.assertEqual(len(pedidas), n)
+        finally:
+            urllib.request.urlopen = original
             servidor._cache.clear()
 
     def test_vivos_del_canal(self):
@@ -219,9 +248,9 @@ class BusquedaEnYouTube(unittest.TestCase):
         def bajar(url):
             pedidas.append(url)
             return self.pagina()
-        original_bajar, original_info = servidor.bajar, servidor.info_video
+        original_bajar, original_info = servidor.bajar, servidor.permiso_oembed
         servidor.bajar = bajar
-        servidor.info_video = lambda vid: {'incrustable': True}
+        servidor.permiso_oembed = lambda vid: True
         servidor._cache.clear()
         try:
             r = servidor.vivos_del_canal('UC' + 'x' * 22)['resultados']
@@ -229,7 +258,7 @@ class BusquedaEnYouTube(unittest.TestCase):
             self.assertEqual([v['id'] for v in r], ['h5efji0_wtQ'], 'solo los que están en vivo ahora')
             self.assertIs(r[0]['incrustable'], True)
         finally:
-            servidor.bajar, servidor.info_video = original_bajar, original_info
+            servidor.bajar, servidor.permiso_oembed = original_bajar, original_info
             servidor._cache.clear()
 
     def test_grupos_validos_de_la_ia(self):
