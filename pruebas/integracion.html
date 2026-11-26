@@ -284,6 +284,13 @@ prueba('🔍 buscar parecido: resultados como miniaturas, en vivo y con el permi
     w.cerrarBuscar();
   }
 });
+prueba('🔍 qué buscar: todas las palabras del título más el canal, sin "LIVE", emojis, fechas ni signos', () => {
+  igual(w.palabrasClave('EarthCam Live: Abbey Road Crossing (London, England)', 'EarthCam'), 'EarthCam Abbey Road Crossing London England');
+  igual(w.palabrasClave('🔴 EN VIVO | Meganoticias Ahora - Martes 14/11/2026', 'Meganoticias'), 'Meganoticias Ahora Martes');
+  igual(w.palabrasClave('Valparaíso, Chile EN VIVO | LIVE CAM', 'Manupuntocl'), 'Valparaíso Chile Manupuntocl');
+  igual(w.palabrasClave('Livestream de Olivares', ''), 'de Olivares', '"live" solo como palabra suelta: no corta Olivares');
+  igual(w.palabrasClave('', 'Lofi Girl'), 'Lofi Girl');
+});
 prueba('🔍 de arriba (tecla /): la misma búsqueda, y lo elegido se agrega al final de la lista que elijas', async () => {
   const R = [
     { id: 'gggggggggg1', titulo: 'Jazz en vivo', canal: 'Canal J', vivo: true, detalle: '', incrustable: true, miniatura: 'about:blank' },

@@ -54,16 +54,24 @@ function quitarCaido(celda) {
 function esNombreDeRelleno(t) {
   return !t || /^Video \d+ \(/.test(t) || /^Canal en vivo UC/.test(t) || /^Lista [\w-]+$/.test(t);
 }
-// Saca de un título de directo lo que cambia todos los días (emojis, "EN VIVO", fechas, "24/7"...)
-function limpiarTitulo(t) {
+// Qué buscar: TODAS las palabras del título (cada una cuenta como palabra clave) más el canal, sin lo que cambia
+// todos los días en un directo (emojis, "EN VIVO", "LIVE", "24/7", fechas) ni signos, y sin repetir palabras.
+// "EarthCam Live: Abbey Road Crossing (London, England)" — EarthCam → "EarthCam Abbey Road Crossing London England"
+function limpiarParaBuscar(t) {
   return (t || '')
     .replace(/[\u{1F000}-\u{1FAFF}☀-➿️]/gu, ' ')
-    .replace(/\b(en vivo|en directo|directo|live|live stream|24\/7|24 horas|señal en vivo|transmisión en vivo)\b/gi, ' ')
     .replace(/\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}/g, ' ')
-    .split(/\s[|•·]\s|\s-\s/)[0]
-    .replace(/[|•·#]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/(^|[^\p{L}\p{N}])(en vivo|en directo|live stream|livestream|live cam|live|24\/7|24h|24 horas|señal en vivo|transmisión en vivo|directo)(?=$|[^\p{L}\p{N}])/giu, '$1 ')
+    .replace(/[^\p{L}\p{N}'&+.]+/gu, ' ')
+    .replace(/(^|\s)[.']+|[.']+(?=\s|$)/g, ' ');
+}
+function palabrasClave(titulo, autor) {
+  const vistas = new Set(), palabras = [];
+  (limpiarParaBuscar(titulo) + ' ' + limpiarParaBuscar(autor)).split(/\s+/).forEach(p => {
+    const k = p.toLowerCase();
+    if (p && !vistas.has(k)) { vistas.add(k); palabras.push(p); }
+  });
+  return palabras.join(' ').slice(0, 150).trim();
 }
 function datosBusqueda(celda) {
   const mem = config.nombres[clave(celda.dataset.linea)] || {};
@@ -72,10 +80,7 @@ function datosBusqueda(celda) {
   const titulo = mem.titulo || (esNombreDeRelleno(tituloVisible) ? '' : tituloVisible);
   const autor = mem.autor || autorVisible;
   const vivo = !!mem.vivo || celda.classList.contains('en-vivo') || celda.dataset.tipo === 'canal';
-  let consulta;
-  if (vivo) consulta = autor ? autor + ' en vivo' : limpiarTitulo(titulo);   // el canal es lo que no cambia
-  else consulta = titulo || autor;
-  return { titulo, autor, vivo, consulta: (consulta || '').trim() };
+  return { titulo, autor, vivo, consulta: palabrasClave(titulo, autor) };
 }
 function urlOriginal(linea) {
   const p = parsear(linea);
